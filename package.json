@@ -1,0 +1,42 @@
+{
+  "name": "svelte-masked-input",
+  "version": "0.0.0",
+  "description": "Input Masking and Formatted inputs for Svelte with no dependencies",
+  "main": "src/components/InputMask.svelte",
+  "scripts": {
+    "build": "cross-env NODE_ENV=production webpack",
+    "dev": "webpack serve --content-base public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/arschmitz/svelte-input-masking.git"
+  },
+  "keywords": [
+    "Input",
+    "Mask",
+    "Input",
+    "Mask",
+    "Format",
+    "Internationalization",
+    "number",
+    "svelte",
+    "sapper",
+    "number",
+    "currency",
+    "percent"
+  ],
+  "devDependencies": {
+    "cross-env": "^7.0.3",
+    "svelte": "^3.31.2",
+    "svelte-loader": "^3.0.0",
+    "webpack": "^5.16.0",
+    "webpack-cli": "^4.4.0",
+    "webpack-dev-server": "^3.11.2"
+  },
+  "author": "Alexander Schmitz",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/arschmitz/svelte-input-masking/issues"
+  },
+  "homepage": "https://github.com/arschmitz/svelte-input-masking#readme"
+}

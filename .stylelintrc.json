@@ -1,0 +1,22 @@
+{
+    "extends": [
+        "stylelint-config-standard",
+        "stylelint-config-sass-guidelines",
+        "stylelint-config-css-modules"
+    ],
+    "plugins": [
+        "stylelint-order",
+        "stylelint-scss"
+    ],
+    "rules": {
+        "at-rule-no-unknown": null,
+        "indentation": 4,
+        "max-nesting-depth": 4,
+        "no-descending-specificity": null,
+        "order/properties-alphabetical-order": true,
+        "scss/at-rule-no-unknown": true,
+        "selector-max-compound-selectors": 4,
+        "selector-max-id": null,
+        "selector-no-qualifying-type": null
+    }
+}

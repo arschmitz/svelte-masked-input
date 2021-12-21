@@ -1,0 +1,25 @@
+{
+    "compilerOptions": {
+        "allowJs": false,
+        "allowSyntheticDefaultImports": true,
+        "baseUrl": "./src",
+        "checkJs": false,
+        "esModuleInterop": true,
+        "forceConsistentCasingInFileNames": true,
+        "importsNotUsedAsValues": "remove",
+        "jsx": "react",
+        "jsxFactory": "_jsx",
+        "lib": ["DOM", "DOM.Iterable", "ES2019"],
+        "moduleResolution": "node",
+        "noUnusedLocals": false,
+        "noUnusedParameters": false,
+        "resolveJsonModule": true,
+        "skipLibCheck": true,
+        "sourceMap": true,
+        "target": "ES2019",
+    },
+    "exclude": [
+        "node_modules"
+    ],
+    "transpileOnly": true
+}

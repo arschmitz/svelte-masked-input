@@ -1,0 +1,103 @@
+module.exports = {
+    env: {
+        browser: true,
+        es6: true,
+    },
+    extends: [
+        'airbnb-base',
+        'plugin:@typescript-eslint/recommended',
+        'plugin:typescript-sort-keys/recommended',
+    ],
+    parser: '@typescript-eslint/parser',
+    parserOptions: {
+        ecmaVersion: 2019,
+        extraFileExtensions: ['.svelte'],
+        sourceType: 'module',
+    },
+    root: true,
+    rules: {
+        '@triplemint/iris/import-order': 'error',
+        '@typescript-eslint/member-delimiter-style': ['error', {
+            multiline: {
+                delimiter: 'semi',
+                requireLast: true,
+            },
+            singleline: {
+                delimiter: 'semi',
+                requireLast: true,
+            },
+        }],
+        '@typescript-eslint/member-ordering': ['error', {
+            default: {
+                memberTypes: ['signature', 'static-field', 'field', 'static-method', 'constructor', 'method'],
+                order: 'alphabetically',
+            },
+            interfaces: {
+                memberTypes: ['constructor', 'signature', 'field', 'method'],
+                order: 'alphabetically',
+            },
+            typeLiterals: {
+                memberTypes: ['constructor', 'signature', 'field', 'method'],
+                order: 'alphabetically',
+            },
+        }],
+        '@typescript-eslint/no-shadow': 'error',
+        '@typescript-eslint/no-unused-vars': [
+            'error',
+            { argsIgnorePattern: '^_' },
+        ],
+        '@typescript-eslint/no-useless-constructor': 'error',
+        '@typescript-eslint/no-var-requires': 'off',
+        'arrow-body-style': 'off',
+        camelcase: 'warn',
+        'class-methods-use-this': 'off',
+        'comma-dangle': [
+            'error',
+            {
+                arrays: 'always-multiline',
+                functions: 'never',
+                objects: 'always-multiline',
+            },
+        ],
+        'function-paren-newline': ['error', 'multiline-arguments'],
+        'import/extensions': 'off',
+        'import/first': 'off',
+        'import/no-extraneous-dependencies': 'off',
+        'import/no-mutable-exports': 'off',
+        'import/no-unresolved': 'off',
+        'import/order': 'off',
+        'import/prefer-default-export': 'off',
+        indent: ['error', 4],
+        'max-classes-per-file': 'off',
+        'max-len': [
+            'error',
+            {
+                code: 120,
+                ignoreRegExpLiterals: true,
+                ignoreStrings: true,
+                ignoreTemplateLiterals: true,
+                ignoreUrls: true,
+            },
+        ],
+        'no-case-declarations': 'off',
+        'no-console': 'off',
+        'no-continue': 'off',
+        'no-nested-ternary': 'off',
+        'no-new': 'warn',
+        'no-param-reassign': 'off',
+        'no-plusplus': 'off',
+        'no-shadow': 'off',
+        'no-underscore-dangle': 'off',
+        'no-unused-vars': 'off',
+        'no-use-before-define': ['error', 'nofunc'],
+        'no-useless-constructor': 'off',
+        'object-curly-newline': ['error', { consistent: true }],
+        'operator-linebreak': ['error', 'before', { overrides: { '=': 'after' } }],
+        'sort-keys': ['error', 'asc', { caseSensitive: false, natural: true }],
+    },
+    settings: {
+        'svelte3/ignore-styles': () => true,
+        'svelte3/ignore-warnings': () => true,
+        'svelte3/typescript': true,
+    },
+};
