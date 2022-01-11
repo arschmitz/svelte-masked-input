@@ -49,7 +49,7 @@ module.exports = {
     output: {
         chunkFilename: '[name].[id].js',
         filename: '[name].js',
-        path: path.join(__dirname, '/public'),
+        path: path.join(__dirname, '/docs'),
     },
     resolve: {
         alias: {
