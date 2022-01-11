@@ -10,7 +10,7 @@ The user can enter letters and numbers. All other characters, like spaces, dashe
 
 ## Example
 
-<http://arschmitz.github.io/svelte-masked-input>
+<http://arschmitz.me/svelte-masked-input>
 
 ## Quick Start
 
