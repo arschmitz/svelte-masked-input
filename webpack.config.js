@@ -7,7 +7,6 @@ const preprocessorOptions = {
     scss: {
         renderSync: true,
     },
-    sourceMap: enableSourceMaps,
     typescript: {
         compilerOptions,
         tsconfigFile: './tsconfig.json',
@@ -16,10 +15,12 @@ const preprocessorOptions = {
 
 module.exports = {
     devServer: {
-        hot: true
+        hot: true,
     },
     devtool: 'eval-source-map',
-    entry: 'build/bundle': ['./src/main.js'],
+    entry: {
+        'build/bundle': ['./src/main.js'],
+    },
     mode,
     module: {
         rules: [
@@ -36,24 +37,24 @@ module.exports = {
                     },
                 ],
             },
-			{
-				// required to prevent errors from Svelte on Webpack 5+
-				test: /node_modules\/svelte\/.*\.mjs$/,
-				resolve: {
-					fullySpecified: false
-				}
-			}
+            {
+                // required to prevent errors from Svelte on Webpack 5+
+                resolve: {
+                    fullySpecified: false,
+                },
+                test: /node_modules\/svelte\/.*\.mjs$/,
+            },
         ],
     },
     output: {
+        chunkFilename: '[name].[id].js',
+        filename: '[name].js',
         path: path.join(__dirname, '/public'),
-		filename: '[name].js',
-		chunkFilename: '[name].[id].js'
     },
     resolve: {
         alias: {
-			svelte: path.dirname(require.resolve('svelte/package.json'))
-		},
+            svelte: path.dirname(require.resolve('svelte/package.json')),
+        },
         extensions: [
             '.ts',
             '.mjs',
@@ -66,6 +67,6 @@ module.exports = {
             'module',
             'browser',
             'main',
-        ]
+        ],
     },
 };

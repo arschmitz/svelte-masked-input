@@ -16,7 +16,6 @@ module.exports = {
     },
     root: true,
     rules: {
-        '@triplemint/iris/import-order': 'error',
         '@typescript-eslint/member-delimiter-style': ['error', {
             multiline: {
                 delimiter: 'semi',

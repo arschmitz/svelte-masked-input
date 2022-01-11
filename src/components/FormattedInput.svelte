@@ -1,16 +1,11 @@
 <script lang="typescript">
-    export let letter = '_';
-    export let number = 'XdDmMyY9';
     export let placeholder = '';
-    export let type = 'text';
-    export let validExample = '';
     export let value = '';
-    export let charset: boolean = null;
     export let pattern = '';
     export let format = '';
     export let prefix = '';
     export let required = false;
-    export let formatter;
+    export let formatter = null;
     export let locale = 'en-us';
     export let currency = 'USD';
     export let formatOptions: Record<string, number | string> = null;
@@ -32,7 +27,7 @@
             .formatToParts(numberWithGroupAndDecimalSeparator)
             .reduce((collection, part) => {
                 if (part.type === 'decimal' || part.type === 'group') {
-                    collection[part.type] = part.value;
+                    colle ction[part.type] = part.value;
                 }
 
                 return collection;
@@ -110,8 +105,8 @@
     };
 
     function formatDecimals(currentFormatter) {
-        const isDecimal = decimalEndRegExp.test(rawValue);
-        const hasDecimal = decimalRegExp.test(rawValue);
+        const isDecimal = decimalEndRegExp.test(inputElement.value);
+        const hasDecimal = decimalRegExp.test(inputElement.value);
         const usedValue = isDecimal ? value.slice(0, -1) : value;
         const intValue = parseFloat(usedValue);
         const digits = intValue > 0
@@ -151,6 +146,13 @@
                 if (Number.isNaN(intValue)) {
                     return ' ';
                 }
+
+                if(placeholder.length <= rawValue.length) {
+                    remainingMask = '';
+                } else {
+                    const remainingMaskLength = placeholder.length - rawValue.length;
+                    remainingMask = placeholder.slice(-1 * remainingMaskLength);
+                }
                 return formats.currencyInt(intValue);
             },
             pattern: '\\$[0-9]{1,3}(,[0-9]{3}){0,}',
@@ -162,6 +164,13 @@
                 const intValue = parseInt(value, 10);
                 if (Number.isNaN(intValue)) {
                     return ' ';
+                }
+
+                if(placeholder.length <= rawValue.length) {
+                    remainingMask = '';
+                } else {
+                    const remainingMaskLength = placeholder.length - rawValue.length;
+                    remainingMask = placeholder.slice(-1 * remainingMaskLength);
                 }
                 return formats.int(intValue);
             },
@@ -182,100 +191,40 @@
                 if (Number.isNaN(intValue)) {
                     return ' ';
                 }
-                return formats.percentInt(intValue);
+
+                if(placeholder.length <= rawValue.length) {
+                    remainingMask = '';
+                } else {
+                    const remainingMaskLength = placeholder.length - rawValue.length;
+                    remainingMask = placeholder.slice(-1 * remainingMaskLength);
+                }
+
+                return `${formats.int(intValue)}`;
             },
+            suffix: '%',
             pattern: '[0-9]{1,})%',
         },
     };
 
+    value = rawValue.replace(/[^\d.-]/g, '');
+    rawValue = prefix && !rawValue ? ' ' : rawValue;
+    remainingMask = prefix ? placeholder.replace(prefix, '') : placeholder;
     $: formatter ||= formatters[format];
-    $: value = charset ? rawValue.replace(/\W/g, '') : rawValue.replace(/[^\d.-]/g, '');
     $: prefix = format ? (formatters[format].prefix || '') : (prefix || '');
-    $: rawValue = prefix && !rawValue ? ' ' : rawValue;
+    $: suffix = format ? (formatters[format].suffix || '') : (suffix || '');
     $: hiddenValue = prefix && rawValue === ' ' ? '' : rawValue;
-    $: remainingMask = prefix ? placeholder.replace(prefix, '') : placeholder;
     $: decimalEndRegExp = new RegExp(`\\${seperators.decimal}$`);
     $: decimalRegExp = new RegExp(`\\${seperators.decimal}`);
     $: placeholderDecimal = placeholder?.split(seperators.decimal)[1];
     $: placeholderDecimalLength = placeholderDecimal?.length;
 
-    async function update(event) {
-        rawValue = event.key === 'Backspace' ? inputElement.value.slice(0, -1) : inputElement.value + event.key;
-        value = charset ? rawValue.replace(/\W/g, '') : rawValue.replace(/[^\d.-]/g, '');
+    async function update() {
+        value = inputElement.value.replace(/[^\d.-]/g, '');
         currentPattern = null;
 
-        event.preventDefault();
+        rawValue = formatters[format].format();
 
-        if (format) {
-            rawValue = formatters[format].format();
-        } else {
-            updateMask();
-        }
         currentPattern = usedPattern;
-    }
-
-    function updateMask(): void {
-        let newValue = '';
-
-        const strippedValue = value.replace(/\D/g, '');
-
-        for (let i = 0, j = 0; i < placeholder.length; i++) {
-            const isInt = !Number.isNaN(parseInt(strippedValue[j], 10));
-            const isLetter = strippedValue[j] ? strippedValue[j].match(/[A-Z]/i) : false;
-            const matchesNumber = number.indexOf(placeholder[i]) >= 0;
-            const matchesLetter = letter.indexOf(placeholder[i]) >= 0;
-
-            if ((matchesNumber && isInt) || (charset && matchesLetter && isLetter)) {
-                newValue += strippedValue[j++];
-            } else if (
-                (!charset && !isInt && matchesNumber)
-                || (charset && ((matchesLetter && !isLetter) || (matchesNumber && !isInt)))
-            ) {
-                console.error('Invalid Character');
-                rawValue = newValue;
-            } else {
-                newValue += placeholder[i];
-            }
-
-            // break if no characters left and the pattern is non-special character
-            if (strippedValue[j] === undefined) {
-                break;
-            }
-        }
-
-        if (validExample) {
-            value = validateProgress(newValue);
-        }
-
-        rawValue = newValue;
-        remainingMask = placeholder.substring(rawValue.length);
-        currentPattern = usedPattern;
-    }
-
-    function validateProgress(newValue) {
-        let testValue = '';
-        const patternRegEx = new RegExp(pattern);
-
-        // Convert to months
-        if (newValue.length === 1 && placeholder.toUpperCase().substring(0, 2) === 'MM') {
-            if (newValue > 1 && newValue < 10) {
-                newValue = `0${newValue}`;
-            }
-            return newValue;
-        }
-
-        // test the value, removing the last character, until what you have is a submatch
-        for (let i = newValue.length; i >= 0; i--) {
-            testValue = newValue + validExample.substring(newValue.length);
-
-            if (patternRegEx.test(testValue)) {
-                return newValue;
-            }
-
-            newValue = newValue.substring(0, newValue.length - 1);
-        }
-
-        return newValue;
     }
 
     $: usedPattern = required || value ? (format ? pattern || formatters[format].pattern : pattern) : null;
@@ -291,10 +240,11 @@
         line-height: 1;
     }
 
-    .shell span {
+    .shell > span {
         position: absolute;
-        left: 9px;
-        top: 4px;
+        top: 50%;
+        left: 4px;
+        transform: translateY(-50%);
         color: #ccc;
         pointer-events: none;
         z-index: -1;
@@ -307,23 +257,26 @@
     }
 
     input.masked,
-    .shell span {
+    .shell > span {
         font-size: 16px;
         font-family: monospace;
         padding-right: 10px;
         background-color: transparent;
         text-transform: uppercase;
     }
+
+    .suffix {
+        color: initial;
+    }
 </style>
 <span class="shell">
-	<span aria-hidden="true">{value.length ? '' : prefix}<i>{hiddenValue}</i>{remainingMask}</span>
+	<span aria-hidden="true">{value.length ? '' : prefix}<i>{hiddenValue}</i>{remainingMask}<span class="suffix">{suffix}</span></span>
 	<input
         bind:this={inputElement}
         class="masked"
         pattern={currentPattern}
-        {type}
         value={rawValue}
-        on:keydown={update}
-        maxlength={format ? null : placeholder.length}
+        on:input={update}
+        {...$$restProps}
 	/>
 </span>
