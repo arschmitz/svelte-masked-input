@@ -27,7 +27,7 @@
             .formatToParts(numberWithGroupAndDecimalSeparator)
             .reduce((collection, part) => {
                 if (part.type === 'decimal' || part.type === 'group') {
-                    colle ction[part.type] = part.value;
+                    collection[part.type] = part.value;
                 }
 
                 return collection;
