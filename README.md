@@ -136,7 +136,6 @@ If you require _ as a special character in your mask? Simply pass an options obj
 #### noValidate
 
 As the *pattern* attribute is being used, you may want to add via javascript the *novalidate* attribute on any ancestor `form` or form control to disable native browser validation. Do add it via JS, because if the JS fails, native validation is a good alternative.
-```
 
 ## Documentation
 
