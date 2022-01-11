@@ -1,6 +1,6 @@
 {
   "name": "svelte-masked-input",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "Input Masking and Formatted inputs for Svelte with no dependencies",
   "main": "src/components/MaskedInput.svelte",
   "scripts": {
