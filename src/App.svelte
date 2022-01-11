@@ -109,7 +109,7 @@
 </style>
 
 <main>
-    <img src="/masked-input-logo.svg" alt="logo" />
+    <img src="./masked-input-logo.svg" alt="logo" />
 	<h1>Svelte Masked Input</h1>
     <p>Cybernetically Enhanced Inputs with Masks for Svelte Apps</p>
     <div class="grid">
