@@ -62,20 +62,20 @@
 
     const formats = {
         currency(input): string {
-            const maximumFractionDigits = 2;
+            const options = formatOptions || {
+                currency,
+                maximumFractionDigits: 2,
+                minimumFractionDigits: 0,
+                style: 'currency',
+            }
+
+            const maximumFractionDigits = options.maximumFractionDigits;
 
             if (getFractionDigits(input) >= maximumFractionDigits) {
                 input = truncateFractionDigits(input, maximumFractionDigits);
             }
 
-            console.log(input)
-
-            const formatFunction = new Intl.NumberFormat(locale, {
-                currency,
-                maximumFractionDigits,
-                minimumFractionDigits: 0,
-                style: 'currency',
-            });
+            const formatFunction = new Intl.NumberFormat(locale, options);
 
             return formatFunction.format(input);
         },
@@ -99,10 +99,19 @@
             return formatFunction.format(input);
         },
         number(input: number): string {
-            const formatFunction = new Intl.NumberFormat(locale, formatOptions || {
+            const options = formatOptions || {
+                maximumFractionDigits: 3,
                 minimumSignificantDigits: significantDigits,
                 style: 'decimal',
-            });
+            }
+
+            const maximumFractionDigits = options.maximumFractionDigits;
+
+            if (getFractionDigits(input) >= maximumFractionDigits) {
+                input = truncateFractionDigits(input, maximumFractionDigits);
+            }
+
+            const formatFunction = new Intl.NumberFormat(locale, options);
 
             return formatFunction.format(input);
         },
