@@ -239,25 +239,25 @@
                 </li>
                 <li>
                     <label for="currency">Currency</label>
-                    <FormattedInput id="currency" placeholder="$X.XX" format="currency" />
+                    <FormattedInput id="currency" placeholder="X.XX" format="currency" />
 
                     <label class="toggle" for="currency-markup">Show Markup</label><input id="currency-markup" type="checkbox"/>
                     <pre>
                         <code>
 &lt;label for="currency">Currency&lt;/label>
-&lt;FormattedInput id="currency" placeholder="$X.XX" format="currency" />
+&lt;FormattedInput id="currency" placeholder="X.XX" format="currency" />
                         </code>
                     </pre>
                 </li>
                 <li>
                     <label for="currencyInt">Currency Int</label>
-                    <FormattedInput id="currencyInt" placeholder="$X" format="currencyInt" />
+                    <FormattedInput id="currencyInt" placeholder="X" format="currencyInt" />
 
                     <label class="toggle" for="currency-int-markup">Show Markup</label><input id="currency-int-markup" type="checkbox"/>
                     <pre>
                         <code>
 &lt;label for="currencyInt">Currency Int&lt;/label>
-&lt;FormattedInput id="currencyInt" placeholder="$X" format="currencyInt" />
+&lt;FormattedInput id="currencyInt" placeholder="X" format="currencyInt" />
                         </code>
                     </pre>
                 </li>

@@ -50,11 +50,29 @@
         return Math.floor(Math.log(n) / log10) + 1;
     }
 
+    function getFractionDigits(number) {
+        return String(number).split('.')[1]?.length
+    }
+
+    function truncateFractionDigits(number, digits) {
+        let [int, decimal] = `${number}`.split('.');
+
+        return parseFloat(`${int}.${decimal.substring(0, digits)}`);
+    }
+
     const formats = {
         currency(input): string {
+            const maximumFractionDigits = 2;
+
+            if (getFractionDigits(input) >= maximumFractionDigits) {
+                input = truncateFractionDigits(input, maximumFractionDigits);
+            }
+
+            console.log(input)
+
             const formatFunction = new Intl.NumberFormat(locale, {
                 currency,
-                maximumFractionDigits: 2,
+                maximumFractionDigits,
                 minimumFractionDigits: 0,
                 style: 'currency',
             });
@@ -62,7 +80,7 @@
             return formatFunction.format(input);
         },
         currencyInt(input): string {
-            const formatFunction = new Intl.NumberFormat(locale, {
+            const formatFunction = new Intl.NumberFormat(locale, formatOptions || {
                 currency,
                 maximumFractionDigits: 0,
                 minimumFractionDigits: 0,
@@ -72,7 +90,7 @@
             return formatFunction.format(input);
         },
         int(input): string {
-            const formatFunction = new Intl.NumberFormat(locale, {
+            const formatFunction = new Intl.NumberFormat(locale, formatOptions || {
                 maximumFractionDigits: 0,
                 minimumFractionDigits: 0,
                 style: 'decimal',
@@ -81,7 +99,7 @@
             return formatFunction.format(input);
         },
         number(input: number): string {
-            const formatFunction = new Intl.NumberFormat(locale, {
+            const formatFunction = new Intl.NumberFormat(locale, formatOptions || {
                 minimumSignificantDigits: significantDigits,
                 style: 'decimal',
             });
@@ -89,7 +107,7 @@
             return formatFunction.format(input);
         },
         percent(input: number): string {
-            const formatFunction = new Intl.NumberFormat(locale, {
+            const formatFunction = new Intl.NumberFormat(locale, formatOptions || {
                 maximumFractionDigits: 0,
                 style: 'percent',
             });
@@ -115,7 +133,7 @@
 
         if (Number.isNaN(intValue)) {
             remainingMask = placeholder;
-            return '';
+            return ' ';
         }
 
         remainingMask = `${isDecimal ? '' : seperators.decimal}${placeholderDecimal}`;
@@ -148,7 +166,7 @@
                 }
 
                 if(placeholder.length <= rawValue.length) {
-                    remainingMask = '';
+                    remainingMask = ' ';
                 } else {
                     const remainingMaskLength = placeholder.length - rawValue.length;
                     remainingMask = placeholder.slice(-1 * remainingMaskLength);
@@ -219,12 +237,22 @@
     $: placeholderDecimalLength = placeholderDecimal?.length;
 
     async function update() {
+        const cursorPosBefore = inputElement.selectionStart;
+        let cursorPosAfter;
+
         value = inputElement.value.replace(/[^\d.-]/g, '');
         currentPattern = null;
 
+        cursorPosAfter = inputElement.selectionStart;
         rawValue = formatters[format].format();
 
+
         currentPattern = usedPattern;
+
+        if (cursorPosAfter - cursorPosBefore > 1 ) {
+            inputElement.selectionStart = cursorPosBefore;
+            inputElement.selectionEnd = cursorPosBefore;
+        }
     }
 
     $: usedPattern = required || value ? (format ? pattern || formatters[format].pattern : pattern) : null;
@@ -275,8 +303,8 @@
         bind:this={inputElement}
         class="masked"
         pattern={currentPattern}
-        value={rawValue}
-        on:input={update}
+        bind:value={rawValue}
+        on:keyup={update}
         {...$$restProps}
 	/>
 </span>
