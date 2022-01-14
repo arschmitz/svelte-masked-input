@@ -1,4 +1,4 @@
-<script lang="typescript">
+<script lang="ts">
     export let placeholder = '';
     export let value = '';
     export let pattern = '';
@@ -10,8 +10,11 @@
     export let currency = 'USD';
     export let formatOptions: Record<string, number | string> = null;
 
+    let _class = '';
+    export { _class as class };
+    export let inputElement: HTMLInputElement;
+
     let rawValue = '';
-    let inputElement: HTMLInputElement;
     let currentPattern = null;
     let remainingMask = placeholder;
     let significantDigits = 1;
@@ -158,6 +161,15 @@
         return `${currentFormatter(intValue)}${isDecimal ? seperators.decimal : ''}`;
     }
 
+    function setRemainingMask() {
+        const remainingMaskLength = placeholder.length - rawValue.length;
+        if (remainingMaskLength <= 0) {
+            remainingMask = ' ';
+        } else {
+            remainingMask = placeholder.slice(-1 * remainingMaskLength);
+        }
+    }
+
     const formatters = {
         currency: {
             format() {
@@ -174,12 +186,7 @@
                     return ' ';
                 }
 
-                if(placeholder.length <= rawValue.length) {
-                    remainingMask = ' ';
-                } else {
-                    const remainingMaskLength = placeholder.length - rawValue.length;
-                    remainingMask = placeholder.slice(-1 * remainingMaskLength);
-                }
+                setRemainingMask();
                 return formats.currencyInt(intValue);
             },
             pattern: '\\$[0-9]{1,3}(,[0-9]{3}){0,}',
@@ -193,12 +200,7 @@
                     return ' ';
                 }
 
-                if(placeholder.length <= rawValue.length) {
-                    remainingMask = '';
-                } else {
-                    const remainingMaskLength = placeholder.length - rawValue.length;
-                    remainingMask = placeholder.slice(-1 * remainingMaskLength);
-                }
+                setRemainingMask();
                 return formats.int(intValue);
             },
             pattern: '[0-9]{1,3}(,[0-9]{3})*\\.[0-9]',
@@ -219,13 +221,7 @@
                     return ' ';
                 }
 
-                if(placeholder.length <= rawValue.length) {
-                    remainingMask = '';
-                } else {
-                    const remainingMaskLength = placeholder.length - rawValue.length;
-                    remainingMask = placeholder.slice(-1 * remainingMaskLength);
-                }
-
+                setRemainingMask();
                 return `${formats.int(intValue)}`;
             },
             suffix: '%',
@@ -255,7 +251,6 @@
         cursorPosAfter = inputElement.selectionStart;
         rawValue = formatters[format].format();
 
-
         currentPattern = usedPattern;
 
         if (cursorPosAfter - cursorPosBefore > 1 ) {
@@ -268,37 +263,33 @@
 </script>
 
 <style lang="scss">
-    :invalid {
-        outline: 1px solid red;
-    }
-
-    .shell {
+    .formatted-input {
         position: relative;
         line-height: 1;
     }
 
-    .shell > span {
+    .formatted-input-mask {
         position: absolute;
         top: 50%;
-        left: 4px;
+        padding: 0 0 0 4px;
         transform: translateY(-50%);
         color: #ccc;
         pointer-events: none;
-        z-index: -1;
     }
-    .shell span i {
+
+    .formatted-input span i {
         font-style: normal;
         color: transparent;
         opacity: 0;
         visibility: hidden;
     }
 
-    input.masked,
-    .shell > span {
+    input,
+    .formatted-input > span {
+        background: transparent;
         font-size: 16px;
         font-family: monospace;
         padding-right: 10px;
-        background-color: transparent;
         text-transform: uppercase;
     }
 
@@ -306,14 +297,14 @@
         color: initial;
     }
 </style>
-<span class="shell">
-	<span aria-hidden="true">{value.length ? '' : prefix}<i>{hiddenValue}</i>{remainingMask}<span class="suffix">{suffix}</span></span>
-	<input
+
+<span class="formatted-input {_class}">
+    <span aria-hidden="true" class="formatted-input-mask">{value.length ? '' : prefix}<i>{hiddenValue}</i>{remainingMask}<span class="suffix">{suffix}</span></span>
+    <input
         bind:this={inputElement}
-        class="masked"
         pattern={currentPattern}
         bind:value={rawValue}
         on:keyup={update}
         {...$$restProps}
-	/>
+    />
 </span>
