@@ -72,6 +72,7 @@
     li {
         text-align: left;
         margin-bottom: 1rem;
+        position: relative;
     }
 
     pre {
@@ -105,6 +106,16 @@
 
     input[type="checkbox"] {
         display: none;
+    }
+
+    :global(input:hover) {
+        background-color: blue;
+    }
+
+    .big :global(input) {
+        padding: 2rem;
+        font-size: 2rem;
+        border: orange solid 3px;
     }
 </style>
 
@@ -215,7 +226,7 @@
             <ul>
                 <li>
                     <label for="number">Number</label>
-                    <FormattedInput id="number" placeholder="0.00" format="number" />
+                    <FormattedInput id="number" placeholder="0.00" format="number"/>
 
                     <label class="toggle" for="number-markup">Show Markup</label><input id="number-markup" type="checkbox"/>
                     <pre>
@@ -262,14 +273,26 @@
                     </pre>
                 </li>
                 <li>
-                    <label for="currencyInt">Percent Int</label>
-                    <FormattedInput id="currencyInt" placeholder="X" format="percentInt" />
+                    <label for="percent">Percent</label>
+                    <FormattedInput id="percent" placeholder="0.00" format="percent" />
+
+                    <label class="toggle" for="percent-markup">Show Markup</label><input id="percent-markup" type="checkbox"/>
+                    <pre>
+                        <code>
+&lt;label for="percent">Percent&lt;/label>
+&lt;FormattedInput id="percent" placeholder="X" format="percentInt" />
+                        </code>
+                    </pre>
+                </li>
+                <li class="big">
+                    <label for="percentInt">Percent Int</label>
+                    <FormattedInput id="percentInt" placeholder="X" format="percentInt" />
 
                     <label class="toggle" for="percent-int-markup">Show Markup</label><input id="percent-int-markup" type="checkbox"/>
                     <pre>
                         <code>
-&lt;label for="currencyInt">Percent Int&lt;/label>
-&lt;FormattedInput id="currencyInt" placeholder="X" format="percentInt" />
+&lt;label for="percentInt">Percent Int&lt;/label>
+&lt;FormattedInput id="percentInt" placeholder="X" format="percentInt" />
                         </code>
                     </pre>
                 </li>

@@ -1,4 +1,4 @@
-<script lang="typescript">
+<script lang="ts">
     export let letter = '_';
     export let number = 'XdDmMyY9';
     export let placeholder = '';

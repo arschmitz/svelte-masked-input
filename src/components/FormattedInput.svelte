@@ -1,319 +1,256 @@
-<script lang="typescript">
-    export let placeholder = '';
-    export let value = '';
-    export let pattern = '';
-    export let format = '';
-    export let prefix = '';
-    export let required = false;
-    export let formatter = null;
-    export let locale = 'en-us';
+<script lang="ts" context="module">
+    let inputId = 1;
+</script>
+
+<script lang="ts">
+    import type { Formatter, Formatters, Separators } from '../helpers';
+    import { afterUpdate, onDestroy, onMount } from "svelte";
+    import { EVENTS } from '../constants';
+    import { createStyleElement, unformat, getSeparators, formatConstructor, formatterConstructor } from '../helpers';
+
     export let currency = 'USD';
-    export let formatOptions: Record<string, number | string> = null;
+    export let format = '';
+    export let formatOptions: Record<string, number | string> = {};
+    export let formatter: Formatter = null;
+    export let inputElement: HTMLInputElement = null;
+    export let locale = 'en-us';
+    export let placeholder = '';
+    export let polling = false;
+    export let prefix = '';
+    export let value: string| number = '';
+    export let strippedValue = '';
+    export let disabledClass = 'disabled';
+    export let disabled = false;
 
-    let rawValue = '';
-    let inputElement: HTMLInputElement;
-    let currentPattern = null;
-    let remainingMask = placeholder;
-    let significantDigits = 1;
-    let decimalRegExp: RegExp = null;
-    let decimalEndRegExp: RegExp = null;
-    let seperators: Record<string, string> = {};
+    let _class = '';
+    export { _class as class };
 
-    const log10 = Math.log(10);
+    const id = ++inputId;
 
-    function getSeperators(_) {
-        const numberWithGroupAndDecimalSeparator = 1000.1;
-        return Intl.NumberFormat(locale)
-            .formatToParts(numberWithGroupAndDecimalSeparator)
-            .reduce((collection, part) => {
-                if (part.type === 'decimal' || part.type === 'group') {
-                    collection[part.type] = part.value;
-                }
+    let separators: Separators;
+    let mask: HTMLSpanElement;
+    let poll: number;
+    let styles: CSSStyleDeclaration;
+    let formatters: Formatters;
+    let formatterObject: Formatter;
+    let oldFormat: string;
+    let styleElement: HTMLStyleElement;
 
-                return collection;
-            }, {});
+    if (typeof value === 'number') {
+        value = `${value}`;
     }
 
-    $: seperators = getSeperators(locale);
+    $: formats = formatConstructor({ currency, formatOptions, locale });
+    strippedValue = unformat(value);
+    $: separators = getSeparators(locale);
+    $: formatters = formatterConstructor(formats);
 
-    function getSignificantDigitCount(n) {
-        n = Math.abs(parseFloat(String(n).replace(seperators.decimal, '')));
+    $: formatterObject = formatters[format] || formatter;
+    $: prefix = format ? (formatterObject?.prefix || '') : (prefix || '');
+    $: suffix = format ? (formatterObject?.suffix || '') : (suffix || '');
+    $: updateMaskStyle(disabled);
 
-        if (n === 0) {
-            return 0;
+    let rawValue = formatterObject?.prefix && !strippedValue ? '' : strippedValue;
+
+    $: updateValue(value, format);
+
+    function getInputValues(newValue?: string) {
+        return {
+            elementValue: inputElement?.value,
+            newValue,
+            rawValue,
+            strippedValue,
+            separators
         }
-
-        while (n !== 0 && n % 10 === 0) {
-            n /= 10;
-        }
-
-        return Math.floor(Math.log(n) / log10) + 1;
     }
 
-    function getFractionDigits(number) {
-        return String(number).split('.')[1]?.length
-    }
-
-    function truncateFractionDigits(number, digits) {
-        let [int, decimal] = `${number}`.split('.');
-
-        return parseFloat(`${int}.${decimal.substring(0, digits)}`);
-    }
-
-    const formats = {
-        currency(input): string {
-            const options = formatOptions || {
-                currency,
-                maximumFractionDigits: 2,
-                minimumFractionDigits: 0,
-                style: 'currency',
+    function updateValue(..._: unknown[]) {
+        setTimeout(() => {
+            if (typeof value === 'number') {
+                value = `${value}`;
             }
 
-            const maximumFractionDigits = options.maximumFractionDigits;
-
-            if (getFractionDigits(input) >= maximumFractionDigits) {
-                input = truncateFractionDigits(input, maximumFractionDigits);
+            if (value === undefined) {
+                inputElement.value = '';
+                update();
+                return;
             }
 
-            const formatFunction = new Intl.NumberFormat(locale, options);
-
-            return formatFunction.format(input);
-        },
-        currencyInt(input): string {
-            const formatFunction = new Intl.NumberFormat(locale, formatOptions || {
-                currency,
-                maximumFractionDigits: 0,
-                minimumFractionDigits: 0,
-                style: 'currency',
-            });
-
-            return formatFunction.format(input);
-        },
-        int(input): string {
-            const formatFunction = new Intl.NumberFormat(locale, formatOptions || {
-                maximumFractionDigits: 0,
-                minimumFractionDigits: 0,
-                style: 'decimal',
-            });
-
-            return formatFunction.format(input);
-        },
-        number(input: number): string {
-            const options = formatOptions || {
-                maximumFractionDigits: 3,
-                minimumSignificantDigits: significantDigits,
-                style: 'decimal',
+            const newRaw = formatterObject?.format(getInputValues(value));
+            if ((newRaw && newRaw !== rawValue) || (oldFormat !== format)) {
+                rawValue = inputElement.value = value;
+                update();
             }
-
-            const maximumFractionDigits = options.maximumFractionDigits;
-
-            if (getFractionDigits(input) >= maximumFractionDigits) {
-                input = truncateFractionDigits(input, maximumFractionDigits);
-            }
-
-            const formatFunction = new Intl.NumberFormat(locale, options);
-
-            return formatFunction.format(input);
-        },
-        percent(input: number): string {
-            const formatFunction = new Intl.NumberFormat(locale, formatOptions || {
-                maximumFractionDigits: 0,
-                style: 'percent',
-            });
-
-            return formatFunction.format(input);
-        },
-        percentInt(input: number): string {
-            const formatFunction = new Intl.NumberFormat(locale, formatOptions || {
-                style: 'percent',
-            });
-            return formatFunction.format(input);
-        },
-    };
-
-    function formatDecimals(currentFormatter) {
-        const isDecimal = decimalEndRegExp.test(inputElement.value);
-        const hasDecimal = decimalRegExp.test(inputElement.value);
-        const usedValue = isDecimal ? value.slice(0, -1) : value;
-        const intValue = parseFloat(usedValue);
-        const digits = intValue > 0
-            ? getSignificantDigitCount(value) + 1
-            : Math.min(4, hasDecimal ? value.length - 1 : value.length);
-
-        if (Number.isNaN(intValue)) {
-            remainingMask = placeholder;
-            return ' ';
-        }
-
-        remainingMask = `${isDecimal ? '' : seperators.decimal}${placeholderDecimal}`;
-        significantDigits = !/0$/.test(rawValue) ? undefined : digits;
-
-        if (hasDecimal && !isDecimal) {
-            const decimalLength = rawValue.split(seperators.decimal)[1].length;
-            const remainingDecimals = placeholderDecimalLength - decimalLength;
-
-            remainingMask = `${remainingDecimals > 0 ? placeholderDecimal.slice(-1 * decimalLength) : ''}`;
-        }
-
-        return `${currentFormatter(intValue)}${isDecimal ? seperators.decimal : ''}`;
+        });
     }
 
-    const formatters = {
-        currency: {
-            format() {
-                return formatDecimals(formats.currency);
-            },
-            pattern: '\\$[0-9]{1,3}(,[0-9]{3}){0,}',
-            prefix: '$',
-        },
-
-        currencyInt: {
-            format() {
-                const intValue = parseInt(value, 10);
-                if (Number.isNaN(intValue)) {
-                    return ' ';
-                }
-
-                if(placeholder.length <= rawValue.length) {
-                    remainingMask = ' ';
-                } else {
-                    const remainingMaskLength = placeholder.length - rawValue.length;
-                    remainingMask = placeholder.slice(-1 * remainingMaskLength);
-                }
-                return formats.currencyInt(intValue);
-            },
-            pattern: '\\$[0-9]{1,3}(,[0-9]{3}){0,}',
-            prefix: '$',
-        },
-
-        int: {
-            format() {
-                const intValue = parseInt(value, 10);
-                if (Number.isNaN(intValue)) {
-                    return ' ';
-                }
-
-                if(placeholder.length <= rawValue.length) {
-                    remainingMask = '';
-                } else {
-                    const remainingMaskLength = placeholder.length - rawValue.length;
-                    remainingMask = placeholder.slice(-1 * remainingMaskLength);
-                }
-                return formats.int(intValue);
-            },
-            pattern: '[0-9]{1,3}(,[0-9]{3})*\\.[0-9]',
-
-        },
-
-        number: {
-            format() {
-                return formatDecimals(formats.number);
-            },
-            pattern: '[0-9]{1,3}(,[0-9]{3})*(\\.[0-9]+)?$',
-        },
-
-        percentInt: {
-            format() {
-                const intValue = parseInt(value, 10);
-                if (Number.isNaN(intValue)) {
-                    return ' ';
-                }
-
-                if(placeholder.length <= rawValue.length) {
-                    remainingMask = '';
-                } else {
-                    const remainingMaskLength = placeholder.length - rawValue.length;
-                    remainingMask = placeholder.slice(-1 * remainingMaskLength);
-                }
-
-                return `${formats.int(intValue)}`;
-            },
-            suffix: '%',
-            pattern: '[0-9]{1,})%',
-        },
-    };
-
-    value = rawValue.replace(/[^\d.-]/g, '');
-    rawValue = prefix && !rawValue ? ' ' : rawValue;
-    remainingMask = prefix ? placeholder.replace(prefix, '') : placeholder;
-    $: formatter ||= formatters[format];
-    $: prefix = format ? (formatters[format].prefix || '') : (prefix || '');
-    $: suffix = format ? (formatters[format].suffix || '') : (suffix || '');
-    $: hiddenValue = prefix && rawValue === ' ' ? '' : rawValue;
-    $: decimalEndRegExp = new RegExp(`\\${seperators.decimal}$`);
-    $: decimalRegExp = new RegExp(`\\${seperators.decimal}`);
-    $: placeholderDecimal = placeholder?.split(seperators.decimal)[1];
-    $: placeholderDecimalLength = placeholderDecimal?.length;
-
-    async function update() {
+    function update() {
         const cursorPosBefore = inputElement.selectionStart;
-        let cursorPosAfter;
+        const originalLength = rawValue.length;
 
-        value = inputElement.value.replace(/[^\d.-]/g, '');
-        currentPattern = null;
+        oldFormat = format;
 
-        cursorPosAfter = inputElement.selectionStart;
-        rawValue = formatters[format].format();
+        strippedValue = unformat(inputElement.value);
 
+        rawValue = formatterObject?.format(getInputValues());
 
-        currentPattern = usedPattern;
+        const changeLength = rawValue.length - originalLength;
 
-        if (cursorPosAfter - cursorPosBefore > 1 ) {
-            inputElement.selectionStart = cursorPosBefore;
-            inputElement.selectionEnd = cursorPosBefore;
+        value = rawValue
+
+        if (changeLength !== 1) {
+            setTimeout(() => {
+                inputElement.selectionStart = cursorPosBefore;
+                inputElement.selectionEnd = cursorPosBefore;
+            })
+        } else {
+            setTimeout(() => {
+                inputElement.selectionStart = cursorPosBefore + 1;
+                inputElement.selectionEnd = cursorPosBefore + 1;
+            })
         }
     }
 
-    $: usedPattern = required || value ? (format ? pattern || formatters[format].pattern : pattern) : null;
+    function _update(this: HTMLInputElement) {
+        return update();
+    }
+
+    function updateMaskStyle(..._: unknown[]) {
+        if (inputElement) {
+            inputElement.classList.remove('copied');
+        }
+        setTimeout(() => {
+            if (!mask?.isConnected) {
+                return;
+            }
+
+            const changes = {};
+
+            if (inputElement.classList.contains('copied')) {
+                return;
+            }
+
+            const newStyleElement = createStyleElement({ id, styles });
+
+            if (styleElement) {
+                styleElement.replaceWith(newStyleElement);
+            } else {
+                mask.append(newStyleElement);
+            }
+
+            styleElement = newStyleElement;
+
+            ['top', 'left', 'width', 'height'].forEach((dimension) => {
+                const prop = `offset${dimension.charAt(0).toUpperCase() + dimension.slice(1)}`;
+                if (inputElement && mask.style[dimension] !== `${inputElement[prop]}px`) {
+                    changes[dimension] = `${inputElement[prop]}px`;
+                }
+            });
+
+            mask.classList[disabled ? 'add' : 'remove'](disabledClass);
+            inputElement.classList.add('copied');
+
+            if (!Object.keys(changes).length) {
+                return;
+            }
+
+            Object.assign(mask.style, changes);
+        }, 1);
+    }
+
+    onMount(() => {
+        styles = getComputedStyle(inputElement);
+
+        if (polling) {
+            poll = window.setInterval(updateMaskStyle, 200);
+        }
+
+        EVENTS.forEach((event) => {
+            inputElement.addEventListener(event, updateMaskStyle);
+        });
+
+        inputElement.addEventListener('input', _update);
+
+        document.fonts.ready.then(updateMaskStyle);
+
+        update();
+    });
+
+    afterUpdate(() => {
+        if (!polling) {
+            updateMaskStyle();
+        }
+    });
+
+    onDestroy(() => {
+        if (poll) {
+            clearInterval(poll);
+        }
+
+        EVENTS.forEach((event) => {
+            inputElement?.removeEventListener(event, updateMaskStyle);
+        });
+
+        inputElement?.removeEventListener('input', _update);
+    });
 </script>
 
 <style lang="scss">
-    :invalid {
-        outline: 1px solid red;
-    }
-
-    .shell {
-        position: relative;
-        line-height: 1;
-    }
-
-    .shell > span {
+    .formatted-input-mask {
         position: absolute;
-        top: 50%;
-        left: 4px;
-        transform: translateY(-50%);
         color: #ccc;
         pointer-events: none;
+        box-sizing: border-box;
+        border-style: solid;
+        border-color: transparent;
+        display: inline-flex;
         z-index: -1;
     }
-    .shell span i {
+
+    i {
         font-style: normal;
         color: transparent;
         opacity: 0;
         visibility: hidden;
     }
 
-    input.masked,
-    .shell > span {
-        font-size: 16px;
-        font-family: monospace;
-        padding-right: 10px;
-        background-color: transparent;
-        text-transform: uppercase;
+    input {
+        box-sizing: border-box;
+    }
+
+    .copied {
+        background: none !important;
+        background-color: transparent !important;
+        background-image: none !important;
     }
 
     .suffix {
         color: initial;
     }
 </style>
-<span class="shell">
-	<span aria-hidden="true">{value.length ? '' : prefix}<i>{hiddenValue}</i>{remainingMask}<span class="suffix">{suffix}</span></span>
-	<input
-        bind:this={inputElement}
-        class="masked"
-        pattern={currentPattern}
-        bind:value={rawValue}
-        on:keyup={update}
-        {...$$restProps}
-	/>
+
+<span
+    aria-hidden="true"
+    data-formatted-id={id}
+    class="formatted-input-mask"
+    bind:this={mask}
+>
+    {#if rawValue}
+        <i>{rawValue}</i><span class="suffix">{suffix}</span>
+    {/if}
 </span>
+<input
+    bind:this={inputElement}
+    bind:value={rawValue}
+    class={_class}
+    {disabled}
+    on:blur
+    on:change
+    on:focus
+    on:input
+    on:keydown
+    {placeholder}
+    inputmode="tel"
+    type="text"
+    {...$$restProps}
+/>
