@@ -1,28 +1,111 @@
 <script lang="ts">
-    export let placeholder = '';
-    export let value = '';
-    export let pattern = '';
+    import { afterUpdate, onDestroy, onMount } from "svelte";
+
+    export let currency = 'USD';
     export let format = '';
+    export let formatOptions: Record<string, number | string> = null;
+    export let formatter = null;
+    export let inputElement: HTMLInputElement = null;
+    export let locale = 'en-us';
+    export let pattern = '';
+    export let placeholder = '';
+    export let polling = false;
     export let prefix = '';
     export let required = false;
-    export let formatter = null;
-    export let locale = 'en-us';
-    export let currency = 'USD';
-    export let formatOptions: Record<string, number | string> = null;
+    export let value = '';
 
     let _class = '';
     export { _class as class };
-    export let inputElement: HTMLInputElement;
 
-    let rawValue = '';
+    const log10 = Math.log(10);
+    const backgroundStyles = [
+        'background-attachment',
+        'background-blend-mode',
+        'background-clip',
+        'background-color',
+        'background-image',
+        'background-origin',
+        'background-position',
+        'background-repeat',
+        'background-size',
+    ];
+    const copiedStyles = [
+        'border-block-end-width',
+        'border-block-start-width',
+        'border-bottom-left-radius',
+        'border-bottom-right-radius',
+        'border-bottom-width',
+        'border-collapse',
+        'border-end-end-radius',
+        'border-end-start-radius',
+        'border-inline-end-width',
+        'border-inline-start-width',
+        'border-left-width',
+        'border-right-width',
+        'border-start-end-radius',
+        'border-start-start-radius',
+        'border-top-left-radius',
+        'border-top-right-radius',
+        'border-top-width',
+        'font-family',
+        'font-kerning',
+        'font-optical-sizing',
+        'font-size',
+        'font-stretch',
+        'font-style',
+        'font-synthesis-small-caps',
+        'font-synthesis-style',
+        'font-synthesis-weight',
+        'font-variant',
+        'font-variant-caps',
+        'font-variant-east-asian',
+        'font-variant-ligatures',
+        'font-variant-numeric',
+        'font-weight',
+        'letter-spacing',
+        'line-height',
+        'padding-block-end',
+        'padding-block-start',
+        'padding-bottom',
+        'padding-inline-end',
+        'padding-inline-start',
+        'padding-left',
+        'padding-right',
+        'padding-top',
+        'text-align',
+        'text-align-last',
+        'text-anchor',
+        'text-decoration',
+        'text-decoration-color',
+        'text-decoration-line',
+        'text-decoration-skip-ink',
+        'text-decoration-style',
+        'text-indent',
+        'text-overflow',
+        'text-rendering',
+        'text-shadow',
+        'text-size-adjust',
+        'text-transform',
+        'text-underline-position',
+        "word-spacing"
+    ];
+    const events = [
+        'pointerover',
+        'pointerout',
+        'focus',
+        'blur',
+        'input',
+    ];
+
     let currentPattern = null;
-    let remainingMask = placeholder;
+    let remainingMask = prefix ? placeholder.replace(prefix, '') : placeholder;
     let significantDigits = 1;
     let decimalRegExp: RegExp = null;
     let decimalEndRegExp: RegExp = null;
     let seperators: Record<string, string> = {};
-
-    const log10 = Math.log(10);
+    let mask: HTMLSpanElement;
+    let poll: number;
+    let styles: CSSStyleDeclaration;
 
     function getSeperators(_) {
         const numberWithGroupAndDecimalSeparator = 1000.1;
@@ -38,6 +121,10 @@
     }
 
     $: seperators = getSeperators(locale);
+    $: decimalEndRegExp = new RegExp(`\\${seperators.decimal}$`);
+    $: decimalRegExp = new RegExp(`\\${seperators.decimal}`);
+    $: placeholderDecimal = placeholder?.split(seperators.decimal)[1];
+    $: placeholderDecimalLength = placeholderDecimal?.length;
 
     function getSignificantDigitCount(n) {
         n = Math.abs(parseFloat(String(n).replace(seperators.decimal, '')));
@@ -120,7 +207,7 @@
         },
         percent(input: number): string {
             const formatFunction = new Intl.NumberFormat(locale, formatOptions || {
-                maximumFractionDigits: 0,
+                maximumFractionDigits: 3,
                 style: 'percent',
             });
 
@@ -214,6 +301,19 @@
             pattern: '[0-9]{1,3}(,[0-9]{3})*(\\.[0-9]+)?$',
         },
 
+        percent: {
+            format() {
+                const numberValue = parseFloat(value);
+                if (Number.isNaN(numberValue)) {
+                    return ' ';
+                }
+
+                return formatDecimals(formats.percent);
+            },
+            suffix: '%',
+            pattern: '[0-9]{1,})*(\\.[0-9]+)?$%',
+        },
+
         percentInt: {
             format() {
                 const intValue = parseInt(value, 10);
@@ -229,17 +329,16 @@
         },
     };
 
-    value = rawValue.replace(/[^\d.-]/g, '');
-    rawValue = prefix && !rawValue ? ' ' : rawValue;
-    remainingMask = prefix ? placeholder.replace(prefix, '') : placeholder;
-    $: formatter ||= formatters[format];
+    $: formatter = formatters[format];
     $: prefix = format ? (formatters[format].prefix || '') : (prefix || '');
     $: suffix = format ? (formatters[format].suffix || '') : (suffix || '');
+    $: usedPattern = required || value ? (format ? pattern || formatters[format].pattern : pattern) : null;
+
+    let rawValue = formatters[format].prefix && !value ? ' ' : value;
+    console.log(`${prefix}x${rawValue}x`)
+    console.log(formatter, formatters[format].prefix);
+
     $: hiddenValue = prefix && rawValue === ' ' ? '' : rawValue;
-    $: decimalEndRegExp = new RegExp(`\\${seperators.decimal}$`);
-    $: decimalRegExp = new RegExp(`\\${seperators.decimal}`);
-    $: placeholderDecimal = placeholder?.split(seperators.decimal)[1];
-    $: placeholderDecimalLength = placeholderDecimal?.length;
 
     async function update() {
         const cursorPosBefore = inputElement.selectionStart;
@@ -259,38 +358,92 @@
         }
     }
 
-    $: usedPattern = required || value ? (format ? pattern || formatters[format].pattern : pattern) : null;
+    function updateMaskStyle() {
+        setTimeout(() => {
+            const changes = {};
+
+            copiedStyles.concat(backgroundStyles).forEach((prop) => {
+                if (mask.style[prop] !== styles[prop]) {
+                    changes[prop] = styles[prop]
+                }
+            });
+
+            ['top', 'left', 'width', 'height'].forEach((dimension) => {
+                const prop = `offset${dimension.charAt(0).toUpperCase() + dimension.slice(1)}`;
+                if (mask.style[dimension] !== `${inputElement[prop]}px`) {
+                    changes[dimension] = `${inputElement[prop]}px`;
+                }
+            });
+
+            if (!Object.keys(changes).length) {
+                return;
+            }
+
+            Object.assign(mask.style, changes);
+
+            inputElement.style.background = 'none';
+        });
+    }
+
+    onMount(() => {
+        styles = getComputedStyle(inputElement);
+
+        if (polling) {
+            poll = window.setInterval(updateMaskStyle, 200);
+        }
+
+        events.forEach((event) => {
+            inputElement.addEventListener(event, updateMaskStyle);
+        });
+
+        inputElement.addEventListener('keyup', update);
+
+        document.fonts.ready.then(updateMaskStyle);
+    });
+
+    afterUpdate(() => {
+        if (!polling) {
+            updateMaskStyle();
+        }
+    });
+
+    onDestroy(() => {
+        if (poll) {
+            clearInterval(poll);
+        }
+
+        events.forEach((event) => {
+            inputElement.removeEventListener(event, updateMaskStyle);
+        });
+
+        inputElement.removeEventListener('keyup', update);
+    })
 </script>
 
 <style lang="scss">
-    .formatted-input {
-        position: relative;
-        line-height: 1;
-    }
-
     .formatted-input-mask {
         position: absolute;
-        top: 50%;
-        padding: 0 0 0 4px;
-        transform: translateY(-50%);
         color: #ccc;
         pointer-events: none;
+        box-sizing: border-box;
+        border-style: solid;
+        border-color: transparent;
+        z-index: -1;
     }
 
-    .formatted-input span i {
+    i {
         font-style: normal;
         color: transparent;
         opacity: 0;
         visibility: hidden;
     }
 
-    input,
-    .formatted-input > span {
-        background: transparent;
+    input {
         font-size: 16px;
         font-family: monospace;
         padding-right: 10px;
         text-transform: uppercase;
+        box-sizing: border-box;
     }
 
     .suffix {
@@ -298,13 +451,17 @@
     }
 </style>
 
-<span class="formatted-input {_class}">
-    <span aria-hidden="true" class="formatted-input-mask">{value.length ? '' : prefix}<i>{hiddenValue}</i>{remainingMask}<span class="suffix">{suffix}</span></span>
-    <input
-        bind:this={inputElement}
-        pattern={currentPattern}
-        bind:value={rawValue}
-        on:keyup={update}
-        {...$$restProps}
-    />
+<span
+    aria-hidden="true"
+    class="formatted-input-mask"
+    bind:this={mask}
+>
+    {value.length ? '' : prefix}<i>{hiddenValue}</i>{remainingMask}<span class="suffix">{suffix}</span>
 </span>
+<input
+    bind:this={inputElement}
+    bind:value={rawValue}
+    class={_class}
+    pattern={currentPattern}
+    {...$$restProps}
+/>
