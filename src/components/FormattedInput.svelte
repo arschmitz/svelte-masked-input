@@ -335,9 +335,6 @@
     $: usedPattern = required || value ? (format ? pattern || formatters[format].pattern : pattern) : null;
 
     let rawValue = formatters[format].prefix && !value ? ' ' : value;
-    console.log(`${prefix}x${rawValue}x`)
-    console.log(formatter, formatters[format].prefix);
-
     $: hiddenValue = prefix && rawValue === ' ' ? '' : rawValue;
 
     async function update() {
@@ -358,11 +355,13 @@
         }
     }
 
-    function updateMaskStyle() {
+
+    function updateMaskStyle({ background = false } : { background?: boolean } = {}) {
         setTimeout(() => {
             const changes = {};
+            const styles = background ? copiedStyles.concat(backgroundStyles) : copiedStyles
 
-            copiedStyles.concat(backgroundStyles).forEach((prop) => {
+            styles.forEach((prop) => {
                 if (mask.style[prop] !== styles[prop]) {
                     changes[prop] = styles[prop]
                 }
@@ -393,12 +392,12 @@
         }
 
         events.forEach((event) => {
-            inputElement.addEventListener(event, updateMaskStyle);
+            inputElement.addEventListener(event, () => updateMaskStyle());
         });
 
         inputElement.addEventListener('keyup', update);
 
-        document.fonts.ready.then(updateMaskStyle);
+        document.fonts.ready.then(() => updateMaskStyle({ background: true }));
     });
 
     afterUpdate(() => {
@@ -413,7 +412,7 @@
         }
 
         events.forEach((event) => {
-            inputElement.removeEventListener(event, updateMaskStyle);
+            inputElement.removeEventListener(event, () => updateMaskStyle());
         });
 
         inputElement.removeEventListener('keyup', update);
