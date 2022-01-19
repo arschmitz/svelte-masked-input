@@ -1,6 +1,8 @@
 <script lang="ts">
     import { afterUpdate, onDestroy, onMount } from "svelte";
 
+    // setting value to a space when empty causes incorrect validation error
+
     export let currency = 'USD';
     export let format = '';
     export let formatOptions: Record<string, number | string> = null;
@@ -64,6 +66,10 @@
         'font-weight',
         'letter-spacing',
         'line-height',
+        'margin-bottom',
+        'margin-left',
+        'margin-right',
+        'margin-top',
         'padding-block-end',
         'padding-block-start',
         'padding-bottom',
@@ -87,7 +93,11 @@
         'text-size-adjust',
         'text-transform',
         'text-underline-position',
-        "word-spacing"
+        'transform',
+        'transform-origin',
+        'transform-style',
+        'word-spacing',
+        'zoom'
     ];
     const events = [
         'pointerover',
@@ -355,13 +365,11 @@
         }
     }
 
-
-    function updateMaskStyle({ background = false } : { background?: boolean } = {}) {
+    function updateMaskStyle() {
         setTimeout(() => {
             const changes = {};
-            const styles = background ? copiedStyles.concat(backgroundStyles) : copiedStyles
 
-            styles.forEach((prop) => {
+            copiedStyles.forEach((prop) => {
                 if (mask.style[prop] !== styles[prop]) {
                     changes[prop] = styles[prop]
                 }
@@ -387,17 +395,27 @@
     onMount(() => {
         styles = getComputedStyle(inputElement);
 
+        Object.assign(
+            mask.style,
+            backgroundStyles.reduce((copied, prop) => {
+                copied[prop] = styles[prop];
+                return copied;
+            }, {}),
+        );
+
         if (polling) {
             poll = window.setInterval(updateMaskStyle, 200);
         }
 
         events.forEach((event) => {
-            inputElement.addEventListener(event, () => updateMaskStyle());
+            inputElement.addEventListener(event, updateMaskStyle);
         });
 
         inputElement.addEventListener('keyup', update);
 
-        document.fonts.ready.then(() => updateMaskStyle({ background: true }));
+        document.fonts.ready.then(updateMaskStyle);
+
+        update();
     });
 
     afterUpdate(() => {
@@ -412,11 +430,11 @@
         }
 
         events.forEach((event) => {
-            inputElement.removeEventListener(event, () => updateMaskStyle());
+            inputElement?.removeEventListener(event, updateMaskStyle);
         });
 
-        inputElement.removeEventListener('keyup', update);
-    })
+        inputElement?.removeEventListener('keyup', update);
+    });
 </script>
 
 <style lang="scss">
@@ -438,9 +456,7 @@
     }
 
     input {
-        font-size: 16px;
         font-family: monospace;
-        padding-right: 10px;
         text-transform: uppercase;
         box-sizing: border-box;
     }
@@ -461,6 +477,11 @@
     bind:this={inputElement}
     bind:value={rawValue}
     class={_class}
+    on:blur
+    on:change
+    on:focus
+    on:input
+    on:keydown
     pattern={currentPattern}
     {...$$restProps}
 />
