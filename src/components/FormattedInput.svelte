@@ -133,7 +133,7 @@
     $: seperators = getSeperators(locale);
     $: decimalEndRegExp = new RegExp(`\\${seperators.decimal}$`);
     $: decimalRegExp = new RegExp(`\\${seperators.decimal}`);
-    $: placeholderDecimal = placeholder?.split(seperators.decimal)[1];
+    $: placeholderDecimal = placeholder?.split(seperators.decimal)[1] || '';
     $: placeholderDecimalLength = placeholderDecimal?.length;
 
     function getSignificantDigitCount(n) {
@@ -221,17 +221,17 @@
                 style: 'percent',
             });
 
-            return formatFunction.format(input);
+            return formatFunction.format(input / 100);
         },
         percentInt(input: number): string {
             const formatFunction = new Intl.NumberFormat(locale, formatOptions || {
                 style: 'percent',
             });
-            return formatFunction.format(input);
+            return formatFunction.format(input / 100);
         },
     };
 
-    function formatDecimals(currentFormatter) {
+    function formatDecimals(currentFormatter, suffix = '') {
         const isDecimal = decimalEndRegExp.test(inputElement.value);
         const hasDecimal = decimalRegExp.test(inputElement.value);
         const usedValue = isDecimal ? value.slice(0, -1) : value;
@@ -241,11 +241,11 @@
             : Math.min(4, hasDecimal ? value.length - 1 : value.length);
 
         if (Number.isNaN(intValue)) {
-            remainingMask = placeholder;
+            remainingMask = placeholder + suffix;
             return ' ';
         }
 
-        remainingMask = `${isDecimal ? '' : seperators.decimal}${placeholderDecimal}`;
+        remainingMask = `${isDecimal || suffix ? '' : seperators.decimal}${placeholderDecimal || ''}`;
         significantDigits = !/0$/.test(rawValue) ? undefined : digits;
 
         if (hasDecimal && !isDecimal) {
@@ -258,12 +258,16 @@
         return `${currentFormatter(intValue)}${isDecimal ? seperators.decimal : ''}`;
     }
 
-    function setRemainingMask() {
+    function setRemainingMask(suffix = '') {
         const remainingMaskLength = placeholder.length - rawValue.length;
         if (remainingMaskLength <= 0) {
             remainingMask = ' ';
         } else {
             remainingMask = placeholder.slice(-1 * remainingMaskLength);
+        }
+
+        if (remainingMask && suffix) {
+            remainingMask += suffix;
         }
     }
 
@@ -272,7 +276,7 @@
             format() {
                 return formatDecimals(formats.currency);
             },
-            pattern: '\\$[0-9]{1,3}(,[0-9]{3}){0,}',
+            pattern: '\\$\\d{1,3}(,\\d{3})*',
             prefix: '$',
         },
 
@@ -286,7 +290,7 @@
                 setRemainingMask();
                 return formats.currencyInt(intValue);
             },
-            pattern: '\\$[0-9]{1,3}(,[0-9]{3}){0,}',
+            pattern: '\\$\\d{1,3}(,\\d{3})*',
             prefix: '$',
         },
 
@@ -300,15 +304,14 @@
                 setRemainingMask();
                 return formats.int(intValue);
             },
-            pattern: '[0-9]{1,3}(,[0-9]{3})*\\.[0-9]',
-
+            pattern: '\\d{1,3}(,\\d{3})*',
         },
 
         number: {
             format() {
                 return formatDecimals(formats.number);
             },
-            pattern: '[0-9]{1,3}(,[0-9]{3})*(\\.[0-9]+)?$',
+            pattern: '\\d{1,3}(,\\d{3})*(\\.\\d+)?$',
         },
 
         percent: {
@@ -318,10 +321,12 @@
                     return ' ';
                 }
 
-                return formatDecimals(formats.percent);
+                const newValue = formatDecimals(formats.number);
+                remainingMask = new Array(value.length - 1).fill(' ').join('');
+                return newValue;
             },
             suffix: '%',
-            pattern: '[0-9]{1,})*(\\.[0-9]+)?$%',
+            pattern: '\\d*(\\.\\d+)?',
         },
 
         percentInt: {
@@ -331,11 +336,11 @@
                     return ' ';
                 }
 
-                setRemainingMask();
+                setRemainingMask('%');
                 return `${formats.int(intValue)}`;
             },
             suffix: '%',
-            pattern: '[0-9]{1,})%',
+            pattern: '\\d+',
         },
     };
 
@@ -367,6 +372,10 @@
 
     function updateMaskStyle() {
         setTimeout(() => {
+            if (!mask.isConnected) {
+                return;
+            }
+
             const changes = {};
 
             copiedStyles.forEach((prop) => {
@@ -445,6 +454,7 @@
         box-sizing: border-box;
         border-style: solid;
         border-color: transparent;
+        display: inline-flex;
         z-index: -1;
     }
 
@@ -471,7 +481,8 @@
     class="formatted-input-mask"
     bind:this={mask}
 >
-    {value.length ? '' : prefix}<i>{hiddenValue}</i>{remainingMask}<span class="suffix">{suffix}</span>
+    {value && value.length ? '' : prefix}<i>{hiddenValue}</i>{remainingMask ||
+''}<span class="suffix">{suffix}</span>
 </span>
 <input
     bind:this={inputElement}
