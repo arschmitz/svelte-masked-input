@@ -1,5 +1,6 @@
 <script lang="ts">
     import { afterUpdate, onDestroy, onMount } from "svelte";
+import { set_input_value } from "svelte/internal";
 
     // setting value to a space when empty causes incorrect validation error
 
@@ -352,11 +353,30 @@
     let rawValue = formatters[format].prefix && !value ? ' ' : value;
     $: hiddenValue = prefix && rawValue === ' ' ? '' : rawValue;
 
-    async function update() {
+    $: setValue(value);
+    let skipNextValue;
+    function setValue(..._: unknown[]) {
+        if (!inputElement || skipNextValue) {
+            skipNextValue = false;
+            return;
+        }
+
+        setTimeout(() => {
+            inputElement.value = value;
+            update({ skip: true });
+        });
+    }
+
+    function update(options) {
         const cursorPosBefore = inputElement.selectionStart;
         let cursorPosAfter;
 
-        value = inputElement.value.replace(/[^\d.-]/g, '');
+
+        if (!options?.skip) {
+            skipNextValue = true;
+            value = inputElement.value.replace(/[^\d.-]/g, '');
+        }
+
         currentPattern = null;
 
         cursorPosAfter = inputElement.selectionStart;
@@ -424,7 +444,7 @@
 
         document.fonts.ready.then(updateMaskStyle);
 
-        update();
+        update({ skip: false });
     });
 
     afterUpdate(() => {
