@@ -1,7 +1,5 @@
 <script lang="ts">
     import { afterUpdate, onDestroy, onMount } from "svelte";
-import { set_input_value } from "svelte/internal";
-
     // setting value to a space when empty causes incorrect validation error
 
     export let currency = 'USD';
@@ -16,6 +14,7 @@ import { set_input_value } from "svelte/internal";
     export let prefix = '';
     export let required = false;
     export let value = '';
+    export let strippedValue = '';
 
     let _class = '';
     export { _class as class };
@@ -117,6 +116,8 @@ import { set_input_value } from "svelte/internal";
     let mask: HTMLSpanElement;
     let poll: number;
     let styles: CSSStyleDeclaration;
+
+    strippedValue = value.replace(/[^\d.-]/g, '');
 
     function getSeperators(_) {
         const numberWithGroupAndDecimalSeparator = 1000.1;
@@ -235,11 +236,11 @@ import { set_input_value } from "svelte/internal";
     function formatDecimals(currentFormatter, suffix = '') {
         const isDecimal = decimalEndRegExp.test(inputElement.value);
         const hasDecimal = decimalRegExp.test(inputElement.value);
-        const usedValue = isDecimal ? value.slice(0, -1) : value;
+        const usedValue = isDecimal ? strippedValue.slice(0, -1) : strippedValue;
         const intValue = parseFloat(usedValue);
         const digits = intValue > 0
-            ? getSignificantDigitCount(value) + 1
-            : Math.min(4, hasDecimal ? value.length - 1 : value.length);
+            ? getSignificantDigitCount(strippedValue) + 1
+            : Math.min(4, hasDecimal ? strippedValue.length - 1 : strippedValue.length);
 
         if (Number.isNaN(intValue)) {
             remainingMask = placeholder + suffix;
@@ -282,13 +283,16 @@ import { set_input_value } from "svelte/internal";
         },
 
         currencyInt: {
-            format() {
-                const intValue = parseInt(value, 10);
+            format({ updateMask = true, newValue = strippedValue } = { updateMask: true, newValue: strippedValue }) {
+                const intValue = parseInt(strippedValue, 10);
+                if (updateMask) {
+                    setRemainingMask();
+                }
                 if (Number.isNaN(intValue)) {
                     return ' ';
                 }
 
-                setRemainingMask();
+
                 return formats.currencyInt(intValue);
             },
             pattern: '\\$\\d{1,3}(,\\d{3})*',
@@ -297,7 +301,7 @@ import { set_input_value } from "svelte/internal";
 
         int: {
             format() {
-                const intValue = parseInt(value, 10);
+                const intValue = parseInt(strippedValue, 10);
                 if (Number.isNaN(intValue)) {
                     return ' ';
                 }
@@ -317,13 +321,13 @@ import { set_input_value } from "svelte/internal";
 
         percent: {
             format() {
-                const numberValue = parseFloat(value);
+                const numberValue = parseFloat(strippedValue);
                 if (Number.isNaN(numberValue)) {
                     return ' ';
                 }
 
                 const newValue = formatDecimals(formats.number);
-                remainingMask = new Array(value.length - 1).fill(' ').join('');
+                remainingMask = new Array(strippedValue.length - 1).fill(' ').join('');
                 return newValue;
             },
             suffix: '%',
@@ -332,7 +336,7 @@ import { set_input_value } from "svelte/internal";
 
         percentInt: {
             format() {
-                const intValue = parseInt(value, 10);
+                const intValue = parseInt(strippedValue, 10);
                 if (Number.isNaN(intValue)) {
                     return ' ';
                 }
@@ -348,45 +352,52 @@ import { set_input_value } from "svelte/internal";
     $: formatter = formatters[format];
     $: prefix = format ? (formatters[format].prefix || '') : (prefix || '');
     $: suffix = format ? (formatters[format].suffix || '') : (suffix || '');
-    $: usedPattern = required || value ? (format ? pattern || formatters[format].pattern : pattern) : null;
+    $: usedPattern = required || strippedValue ? (format ? pattern || formatters[format].pattern : pattern) : null;
+    $: usedPlaceholder = format ? formats[format].placeholder : null;
 
-    let rawValue = formatters[format].prefix && !value ? ' ' : value;
+    let rawValue = formatters[format].prefix && !strippedValue ? ' ' : strippedValue;
     $: hiddenValue = prefix && rawValue === ' ' ? '' : rawValue;
 
-    $: setValue(value);
-    let skipNextValue;
-    function setValue(..._: unknown[]) {
-        if (!inputElement || skipNextValue) {
-            skipNextValue = false;
-            return;
-        }
+    $: updateValue(value);
 
+    function updateValue(_) {
         setTimeout(() => {
-            inputElement.value = value;
-            update({ skip: true });
+            if (value === undefined) {
+                update({ newValue: '' });
+                return;
+            }
+
+            const newRaw = formatters[format].format({ updateMask: false, newValue: value });
+            if (newRaw && newRaw !== rawValue) {
+                update();
+            }
         });
     }
 
-    function update(options) {
+    function update({ newValue } = { newValue: null }) {
         const cursorPosBefore = inputElement.selectionStart;
-        let cursorPosAfter;
+        const originalLength = rawValue.length;
 
-
-        if (!options?.skip) {
-            skipNextValue = true;
-            value = inputElement.value.replace(/[^\d.-]/g, '');
-        }
-
+        strippedValue = newValue !== undefined ?  newValue : inputElement.value.replace(/[^\d.-]/g, '');
         currentPattern = null;
 
-        cursorPosAfter = inputElement.selectionStart;
         rawValue = formatters[format].format();
 
         currentPattern = usedPattern;
+        const changeLength = rawValue.length - originalLength;
 
-        if (cursorPosAfter - cursorPosBefore > 1 ) {
-            inputElement.selectionStart = cursorPosBefore;
-            inputElement.selectionEnd = cursorPosBefore;
+        value = rawValue
+
+        if (changeLength !== 1) {
+            setTimeout(() => {
+                inputElement.selectionStart = cursorPosBefore;
+                inputElement.selectionEnd = cursorPosBefore;
+            })
+        } else {
+            setTimeout(() => {
+                inputElement.selectionStart = cursorPosBefore + 1;
+                inputElement.selectionEnd = cursorPosBefore + 1;
+            })
         }
     }
 
@@ -440,11 +451,11 @@ import { set_input_value } from "svelte/internal";
             inputElement.addEventListener(event, updateMaskStyle);
         });
 
-        inputElement.addEventListener('keyup', update);
+        inputElement.addEventListener('input', update);
 
         document.fonts.ready.then(updateMaskStyle);
 
-        update({ skip: false });
+        update();
     });
 
     afterUpdate(() => {
@@ -501,7 +512,7 @@ import { set_input_value } from "svelte/internal";
     class="formatted-input-mask"
     bind:this={mask}
 >
-    {value && value.length ? '' : prefix}<i>{hiddenValue}</i>{remainingMask ||
+    {strippedValue && strippedValue.length ? '' : prefix}<i>{hiddenValue}</i>{remainingMask ||
 ''}<span class="suffix">{suffix}</span>
 </span>
 <input
@@ -513,6 +524,7 @@ import { set_input_value } from "svelte/internal";
     on:focus
     on:input
     on:keydown
+    placeholder={usedPlaceholder}
     pattern={currentPattern}
     {...$$restProps}
 />
