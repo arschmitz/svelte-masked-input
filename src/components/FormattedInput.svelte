@@ -117,7 +117,8 @@
     let poll: number;
     let styles: CSSStyleDeclaration;
 
-    strippedValue = value.replace(/[^\d.-]/g, '');
+    console.log(typeof value, value)
+    strippedValue = value?.replace(/[^\d.-]/g, '') || '';
 
     function getSeperators(_) {
         const numberWithGroupAndDecimalSeparator = 1000.1;
@@ -283,7 +284,7 @@
         },
 
         currencyInt: {
-            format({ updateMask = true, newValue = strippedValue } = { updateMask: true, newValue: strippedValue }) {
+            format({ updateMask = true } = { updateMask: true }) {
                 const intValue = parseInt(strippedValue, 10);
                 if (updateMask) {
                     setRemainingMask();
@@ -367,7 +368,7 @@
                 return;
             }
 
-            const newRaw = formatters[format].format({ updateMask: false, newValue: value });
+            const newRaw = formatters[format].format({ updateMask: false });
             if (newRaw && newRaw !== rawValue) {
                 update();
             }
@@ -378,7 +379,7 @@
         const cursorPosBefore = inputElement.selectionStart;
         const originalLength = rawValue.length;
 
-        strippedValue = newValue !== undefined ?  newValue : inputElement.value.replace(/[^\d.-]/g, '');
+        strippedValue = newValue !== undefined && newValue !== null ?  newValue : inputElement.value.replace(/[^\d.-]/g, '');
         currentPattern = null;
 
         rawValue = formatters[format].format();
@@ -399,6 +400,10 @@
                 inputElement.selectionEnd = cursorPosBefore + 1;
             })
         }
+    }
+
+    function _update(this: HTMLInputElement) {
+        return update();
     }
 
     function updateMaskStyle() {
@@ -451,7 +456,7 @@
             inputElement.addEventListener(event, updateMaskStyle);
         });
 
-        inputElement.addEventListener('input', update);
+        inputElement.addEventListener('input', _update);
 
         document.fonts.ready.then(updateMaskStyle);
 
@@ -473,7 +478,7 @@
             inputElement?.removeEventListener(event, updateMaskStyle);
         });
 
-        inputElement?.removeEventListener('keyup', update);
+        inputElement?.removeEventListener('input', _update);
     });
 </script>
 
