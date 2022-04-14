@@ -262,6 +262,10 @@
     }
 
     function setRemainingMask(suffix = '') {
+        if (!rawValue) {
+            remainingMask = ` ${placeholder}`;
+        }
+
         const remainingMaskLength = placeholder.length - rawValue.length;
         if (remainingMaskLength <= 0) {
             remainingMask = ' ';
@@ -284,11 +288,14 @@
         },
 
         currencyInt: {
-            format({ updateMask = true } = { updateMask: true }) {
-                const intValue = parseInt(strippedValue, 10);
+            format({ updateMask = true, newValue } = { updateMask: true, newValue: null }) {
+                let intValue;
+                intValue = parseInt((newValue || rawValue)?.replace(/[^\d.-]/g, '') || '', 10);
+
                 if (updateMask) {
                     setRemainingMask();
                 }
+
                 if (Number.isNaN(intValue)) {
                     return ' ';
                 }
@@ -364,12 +371,16 @@
     function updateValue(_) {
         setTimeout(() => {
             if (value === undefined) {
-                update({ newValue: '' });
+                inputElement.value = '';
+                update();
                 return;
             }
 
-            const newRaw = formatters[format].format({ updateMask: false });
+
+            const newRaw = formatters[format].format({ updateMask: false, newValue: value });
+            console.log(newRaw, rawValue, value)
             if (newRaw && newRaw !== rawValue) {
+                inputElement.value = value;
                 update();
             }
         });
@@ -530,6 +541,5 @@
     on:input
     on:keydown
     placeholder={usedPlaceholder}
-    pattern={currentPattern}
     {...$$restProps}
 />
