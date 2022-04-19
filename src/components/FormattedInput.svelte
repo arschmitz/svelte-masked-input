@@ -13,7 +13,7 @@
     export let polling = false;
     export let prefix = '';
     export let required = false;
-    export let value = '';
+    export let value: string| number = '';
     export let strippedValue = '';
 
     let _class = '';
@@ -104,7 +104,6 @@
         'pointerout',
         'focus',
         'blur',
-        'input',
     ];
 
     let currentPattern = null;
@@ -117,7 +116,10 @@
     let poll: number;
     let styles: CSSStyleDeclaration;
 
-    console.log(typeof value, value)
+    if (typeof value === 'number') {
+        value = value.toString();
+    }
+
     strippedValue = value?.replace(/[^\d.-]/g, '') || '';
 
     function getSeperators(_) {
@@ -245,7 +247,7 @@
 
         if (Number.isNaN(intValue)) {
             remainingMask = placeholder + suffix;
-            return ' ';
+            return '';
         }
 
         remainingMask = `${isDecimal || suffix ? '' : seperators.decimal}${placeholderDecimal || ''}`;
@@ -259,23 +261,6 @@
         }
 
         return `${currentFormatter(intValue)}${isDecimal ? seperators.decimal : ''}`;
-    }
-
-    function setRemainingMask(suffix = '') {
-        if (!rawValue) {
-            remainingMask = ` ${placeholder}`;
-        }
-
-        const remainingMaskLength = placeholder.length - rawValue.length;
-        if (remainingMaskLength <= 0) {
-            remainingMask = ' ';
-        } else {
-            remainingMask = placeholder.slice(-1 * remainingMaskLength);
-        }
-
-        if (remainingMask && suffix) {
-            remainingMask += suffix;
-        }
     }
 
     const formatters = {
@@ -292,12 +277,8 @@
                 let intValue;
                 intValue = parseInt((newValue || rawValue)?.replace(/[^\d.-]/g, '') || '', 10);
 
-                if (updateMask) {
-                    setRemainingMask();
-                }
-
                 if (Number.isNaN(intValue)) {
-                    return ' ';
+                    return '';
                 }
 
 
@@ -311,10 +292,9 @@
             format() {
                 const intValue = parseInt(strippedValue, 10);
                 if (Number.isNaN(intValue)) {
-                    return ' ';
+                    return '';
                 }
 
-                setRemainingMask();
                 return formats.int(intValue);
             },
             pattern: '\\d{1,3}(,\\d{3})*',
@@ -331,7 +311,7 @@
             format() {
                 const numberValue = parseFloat(strippedValue);
                 if (Number.isNaN(numberValue)) {
-                    return ' ';
+                    return '';
                 }
 
                 const newValue = formatDecimals(formats.number);
@@ -346,10 +326,9 @@
             format() {
                 const intValue = parseInt(strippedValue, 10);
                 if (Number.isNaN(intValue)) {
-                    return ' ';
+                    return '';
                 }
 
-                setRemainingMask('%');
                 return `${formats.int(intValue)}`;
             },
             suffix: '%',
@@ -361,15 +340,17 @@
     $: prefix = format ? (formatters[format].prefix || '') : (prefix || '');
     $: suffix = format ? (formatters[format].suffix || '') : (suffix || '');
     $: usedPattern = required || strippedValue ? (format ? pattern || formatters[format].pattern : pattern) : null;
-    $: usedPlaceholder = format ? formats[format].placeholder : null;
 
-    let rawValue = formatters[format].prefix && !strippedValue ? ' ' : strippedValue;
-    $: hiddenValue = prefix && rawValue === ' ' ? '' : rawValue;
+    let rawValue = formatters[format].prefix && !strippedValue ? '' : strippedValue;
 
     $: updateValue(value);
 
     function updateValue(_) {
         setTimeout(() => {
+            if (typeof value === 'number') {
+                value = value.toString();
+            }
+
             if (value === undefined) {
                 inputElement.value = '';
                 update();
@@ -378,7 +359,6 @@
 
 
             const newRaw = formatters[format].format({ updateMask: false, newValue: value });
-            console.log(newRaw, rawValue, value)
             if (newRaw && newRaw !== rawValue) {
                 inputElement.value = value;
                 update();
@@ -528,8 +508,9 @@
     class="formatted-input-mask"
     bind:this={mask}
 >
-    {strippedValue && strippedValue.length ? '' : prefix}<i>{hiddenValue}</i>{remainingMask ||
-''}<span class="suffix">{suffix}</span>
+    {#if rawValue}
+        <i>{rawValue}</i><span class="suffix">{suffix}</span>
+    {/if}
 </span>
 <input
     bind:this={inputElement}
@@ -540,6 +521,6 @@
     on:focus
     on:input
     on:keydown
-    placeholder={usedPlaceholder}
+    {placeholder}
     {...$$restProps}
 />
