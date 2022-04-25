@@ -4,7 +4,7 @@
 
     export let currency = 'USD';
     export let format = '';
-    export let formatOptions: Record<string, number | string> = null;
+    export let formatOptions: Record<string, number | string> = {};
     export let formatter = null;
     export let inputElement: HTMLInputElement = null;
     export let locale = 'en-us';
@@ -107,7 +107,6 @@
     ];
 
     let currentPattern = null;
-    let remainingMask = prefix ? placeholder.replace(prefix, '') : placeholder;
     let significantDigits = 1;
     let decimalRegExp: RegExp = null;
     let decimalEndRegExp: RegExp = null;
@@ -139,7 +138,6 @@
     $: decimalEndRegExp = new RegExp(`\\${seperators.decimal}$`);
     $: decimalRegExp = new RegExp(`\\${seperators.decimal}`);
     $: placeholderDecimal = placeholder?.split(seperators.decimal)[1] || '';
-    $: placeholderDecimalLength = placeholderDecimal?.length;
 
     function getSignificantDigitCount(n) {
         n = Math.abs(parseFloat(String(n).replace(seperators.decimal, '')));
@@ -167,11 +165,12 @@
 
     const formats = {
         currency(input): string {
-            const options = formatOptions || {
+            const options = {
                 currency,
                 maximumFractionDigits: 2,
                 minimumFractionDigits: 0,
                 style: 'currency',
+                ...formatOptions,
             }
 
             const maximumFractionDigits = options.maximumFractionDigits;
@@ -185,29 +184,32 @@
             return formatFunction.format(input);
         },
         currencyInt(input): string {
-            const formatFunction = new Intl.NumberFormat(locale, formatOptions || {
+            const formatFunction = new Intl.NumberFormat(locale, {
                 currency,
                 maximumFractionDigits: 0,
                 minimumFractionDigits: 0,
                 style: 'currency',
+                ...formatOptions,
             });
 
             return formatFunction.format(input);
         },
         int(input): string {
-            const formatFunction = new Intl.NumberFormat(locale, formatOptions || {
+            const formatFunction = new Intl.NumberFormat(locale, {
                 maximumFractionDigits: 0,
                 minimumFractionDigits: 0,
                 style: 'decimal',
+                ...formatOptions,
             });
 
             return formatFunction.format(input);
         },
         number(input: number): string {
-            const options = formatOptions || {
+            const options = {
                 maximumFractionDigits: 3,
                 minimumSignificantDigits: significantDigits,
                 style: 'decimal',
+                ...formatOptions,
             }
 
             const maximumFractionDigits = options.maximumFractionDigits;
@@ -221,16 +223,18 @@
             return formatFunction.format(input);
         },
         percent(input: number): string {
-            const formatFunction = new Intl.NumberFormat(locale, formatOptions || {
+            const formatFunction = new Intl.NumberFormat(locale, {
                 maximumFractionDigits: 3,
                 style: 'percent',
+                ...formatOptions,
             });
 
             return formatFunction.format(input / 100);
         },
         percentInt(input: number): string {
-            const formatFunction = new Intl.NumberFormat(locale, formatOptions || {
+            const formatFunction = new Intl.NumberFormat(locale, {
                 style: 'percent',
+                ...formatOptions,
             });
             return formatFunction.format(input / 100);
         },
@@ -246,18 +250,13 @@
             : Math.min(4, hasDecimal ? strippedValue.length - 1 : strippedValue.length);
 
         if (Number.isNaN(intValue)) {
-            remainingMask = placeholder + suffix;
             return '';
         }
 
-        remainingMask = `${isDecimal || suffix ? '' : seperators.decimal}${placeholderDecimal || ''}`;
         significantDigits = !/0$/.test(rawValue) ? undefined : digits;
 
         if (hasDecimal && !isDecimal) {
             const decimalLength = rawValue.split(seperators.decimal)[1].length;
-            const remainingDecimals = placeholderDecimalLength - decimalLength;
-
-            remainingMask = `${remainingDecimals > 0 ? placeholderDecimal.slice(-1 * decimalLength) : ''}`;
         }
 
         return `${currentFormatter(intValue)}${isDecimal ? seperators.decimal : ''}`;
@@ -315,7 +314,6 @@
                 }
 
                 const newValue = formatDecimals(formats.number);
-                remainingMask = new Array(strippedValue.length - 1).fill(' ').join('');
                 return newValue;
             },
             suffix: '%',
@@ -341,7 +339,8 @@
     $: suffix = format ? (formatters[format].suffix || '') : (suffix || '');
     $: usedPattern = required || strippedValue ? (format ? pattern || formatters[format].pattern : pattern) : null;
 
-    let rawValue = formatters[format].prefix && !strippedValue ? '' : strippedValue;
+    console.log('format', format)
+    let rawValue = formatters[format]?.prefix && !strippedValue ? '' : strippedValue;
 
     $: updateValue(value);
 
@@ -493,8 +492,6 @@
     }
 
     input {
-        font-family: monospace;
-        text-transform: uppercase;
         box-sizing: border-box;
     }
 
