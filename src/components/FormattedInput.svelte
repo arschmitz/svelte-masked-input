@@ -68,7 +68,7 @@
 
             const newRaw = formatterObject?.format(getInputValues(value));
             if ((newRaw && newRaw !== rawValue) || (oldFormat !== format)) {
-                rawValue = value;
+                rawValue = inputElement.value = value;
                 update();
             }
         });

@@ -63,7 +63,6 @@ const log10 = Math.log(10);
 export function formatDecimals(
     { formatter, strippedValue, elementValue, rawValue, seperators, newValue }: FormatDecimalsInput
 ): string {
-    console.log({ dec: newValue });
     const decimalEndRegExp = new RegExp(`\\${seperators.decimal}$`);
     const decimalRegExp = new RegExp(`\\${seperators.decimal}`);
     const isDecimal = decimalEndRegExp.test(newValue || elementValue);
