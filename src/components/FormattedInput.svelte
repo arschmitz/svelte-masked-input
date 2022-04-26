@@ -88,8 +88,6 @@
 
         value = rawValue
 
-        console.log(rawValue)
-
         if (changeLength !== 1) {
             setTimeout(() => {
                 inputElement.selectionStart = cursorPosBefore;
