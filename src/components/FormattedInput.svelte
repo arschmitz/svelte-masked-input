@@ -1,353 +1,63 @@
 <script lang="ts">
-    import { afterUpdate, onDestroy, onMount } from "svelte";
-    // setting value to a space when empty causes incorrect validation error
+    import type { Formatter, Formatters, Seperators } from '../helpers';
+    import { afterUpdate, onDestroy, onMount, tick } from "svelte";
+    import { BACKGROUND_STYLES, EVENTS, STYLES } from '../constants';
+    import { unformat, getSeperators, formatConstructor, formatterConstructor } from '../helpers';
 
     export let currency = 'USD';
     export let format = '';
     export let formatOptions: Record<string, number | string> = {};
-    export let formatter = null;
+    export let formatter: Formatter = null;
     export let inputElement: HTMLInputElement = null;
     export let locale = 'en-us';
-    export let pattern = '';
     export let placeholder = '';
     export let polling = false;
     export let prefix = '';
-    export let required = false;
     export let value: string| number = '';
     export let strippedValue = '';
 
     let _class = '';
     export { _class as class };
 
-    const log10 = Math.log(10);
-    const backgroundStyles = [
-        'background-attachment',
-        'background-blend-mode',
-        'background-clip',
-        'background-color',
-        'background-image',
-        'background-origin',
-        'background-position',
-        'background-repeat',
-        'background-size',
-    ];
-    const copiedStyles = [
-        'border-block-end-width',
-        'border-block-start-width',
-        'border-bottom-left-radius',
-        'border-bottom-right-radius',
-        'border-bottom-width',
-        'border-collapse',
-        'border-end-end-radius',
-        'border-end-start-radius',
-        'border-inline-end-width',
-        'border-inline-start-width',
-        'border-left-width',
-        'border-right-width',
-        'border-start-end-radius',
-        'border-start-start-radius',
-        'border-top-left-radius',
-        'border-top-right-radius',
-        'border-top-width',
-        'font-family',
-        'font-kerning',
-        'font-optical-sizing',
-        'font-size',
-        'font-stretch',
-        'font-style',
-        'font-synthesis-small-caps',
-        'font-synthesis-style',
-        'font-synthesis-weight',
-        'font-variant',
-        'font-variant-caps',
-        'font-variant-east-asian',
-        'font-variant-ligatures',
-        'font-variant-numeric',
-        'font-weight',
-        'letter-spacing',
-        'line-height',
-        'margin-bottom',
-        'margin-left',
-        'margin-right',
-        'margin-top',
-        'padding-block-end',
-        'padding-block-start',
-        'padding-bottom',
-        'padding-inline-end',
-        'padding-inline-start',
-        'padding-left',
-        'padding-right',
-        'padding-top',
-        'text-align',
-        'text-align-last',
-        'text-anchor',
-        'text-decoration',
-        'text-decoration-color',
-        'text-decoration-line',
-        'text-decoration-skip-ink',
-        'text-decoration-style',
-        'text-indent',
-        'text-overflow',
-        'text-rendering',
-        'text-shadow',
-        'text-size-adjust',
-        'text-transform',
-        'text-underline-position',
-        'transform',
-        'transform-origin',
-        'transform-style',
-        'word-spacing',
-        'zoom'
-    ];
-    const events = [
-        'pointerover',
-        'pointerout',
-        'focus',
-        'blur',
-    ];
-
-    let currentPattern = null;
-    let significantDigits = 1;
-    let decimalRegExp: RegExp = null;
-    let decimalEndRegExp: RegExp = null;
-    let seperators: Record<string, string> = {};
+    let seperators: Seperators;
     let mask: HTMLSpanElement;
     let poll: number;
     let styles: CSSStyleDeclaration;
+    let formatters: Formatters;
+    let formatterObject: Formatter;
+    let oldFormat: string;
 
     if (typeof value === 'number') {
-        value = value.toString();
+        value = `${value}`;
     }
 
-    strippedValue = value?.replace(/[^\d.-]/g, '') || '';
-
-    function getSeperators(_) {
-        const numberWithGroupAndDecimalSeparator = 1000.1;
-        return Intl.NumberFormat(locale)
-            .formatToParts(numberWithGroupAndDecimalSeparator)
-            .reduce((collection, part) => {
-                if (part.type === 'decimal' || part.type === 'group') {
-                    collection[part.type] = part.value;
-                }
-
-                return collection;
-            }, {});
-    }
-
+    $: formats = formatConstructor({ currency, formatOptions, locale });
+    strippedValue = unformat(value);
     $: seperators = getSeperators(locale);
-    $: decimalEndRegExp = new RegExp(`\\${seperators.decimal}$`);
-    $: decimalRegExp = new RegExp(`\\${seperators.decimal}`);
-    $: placeholderDecimal = placeholder?.split(seperators.decimal)[1] || '';
+    $: formatters = formatterConstructor(formats);
 
-    function getSignificantDigitCount(n) {
-        n = Math.abs(parseFloat(String(n).replace(seperators.decimal, '')));
+    $: formatterObject = formatters[format] || formatter;
+    $: prefix = format ? (formatterObject?.prefix || '') : (prefix || '');
+    $: suffix = format ? (formatterObject?.suffix || '') : (suffix || '');
 
-        if (n === 0) {
-            return 0;
+    let rawValue = formatterObject?.prefix && !strippedValue ? '' : strippedValue;
+
+    $: updateValue(value, format);
+
+    function getInputValues(newValue?: string) {
+        return {
+            elementValue: inputElement?.value,
+            newValue,
+            rawValue,
+            strippedValue,
+            seperators
         }
-
-        while (n !== 0 && n % 10 === 0) {
-            n /= 10;
-        }
-
-        return Math.floor(Math.log(n) / log10) + 1;
     }
 
-    function getFractionDigits(number) {
-        return String(number).split('.')[1]?.length
-    }
-
-    function truncateFractionDigits(number, digits) {
-        let [int, decimal] = `${number}`.split('.');
-
-        return parseFloat(`${int}.${decimal.substring(0, digits)}`);
-    }
-
-    const formats = {
-        currency(input): string {
-            const options = {
-                currency,
-                maximumFractionDigits: 2,
-                minimumFractionDigits: 0,
-                style: 'currency',
-                ...formatOptions,
-            }
-
-            const maximumFractionDigits = options.maximumFractionDigits;
-
-            if (getFractionDigits(input) >= maximumFractionDigits) {
-                input = truncateFractionDigits(input, maximumFractionDigits);
-            }
-
-            const formatFunction = new Intl.NumberFormat(locale, options);
-
-            return formatFunction.format(input);
-        },
-        currencyInt(input): string {
-            const formatFunction = new Intl.NumberFormat(locale, {
-                currency,
-                maximumFractionDigits: 0,
-                minimumFractionDigits: 0,
-                style: 'currency',
-                ...formatOptions,
-            });
-
-            return formatFunction.format(input);
-        },
-        int(input): string {
-            const formatFunction = new Intl.NumberFormat(locale, {
-                maximumFractionDigits: 0,
-                minimumFractionDigits: 0,
-                style: 'decimal',
-                ...formatOptions,
-            });
-
-            return formatFunction.format(input);
-        },
-        number(input: number): string {
-            const options = {
-                maximumFractionDigits: 3,
-                minimumSignificantDigits: significantDigits,
-                style: 'decimal',
-                ...formatOptions,
-            }
-
-            const maximumFractionDigits = options.maximumFractionDigits;
-
-            if (getFractionDigits(input) >= maximumFractionDigits) {
-                input = truncateFractionDigits(input, maximumFractionDigits);
-            }
-
-            const formatFunction = new Intl.NumberFormat(locale, options);
-
-            return formatFunction.format(input);
-        },
-        percent(input: number): string {
-            const formatFunction = new Intl.NumberFormat(locale, {
-                maximumFractionDigits: 3,
-                style: 'percent',
-                ...formatOptions,
-            });
-
-            return formatFunction.format(input / 100);
-        },
-        percentInt(input: number): string {
-            const formatFunction = new Intl.NumberFormat(locale, {
-                style: 'percent',
-                ...formatOptions,
-            });
-            return formatFunction.format(input / 100);
-        },
-    };
-
-    function formatDecimals(currentFormatter, suffix = '') {
-        const isDecimal = decimalEndRegExp.test(inputElement.value);
-        const hasDecimal = decimalRegExp.test(inputElement.value);
-        const usedValue = isDecimal ? strippedValue.slice(0, -1) : strippedValue;
-        const intValue = parseFloat(usedValue);
-        const digits = intValue > 0
-            ? getSignificantDigitCount(strippedValue) + 1
-            : Math.min(4, hasDecimal ? strippedValue.length - 1 : strippedValue.length);
-
-        if (Number.isNaN(intValue)) {
-            return '';
-        }
-
-        significantDigits = !/0$/.test(rawValue) ? undefined : digits;
-
-        if (hasDecimal && !isDecimal) {
-            const decimalLength = rawValue.split(seperators.decimal)[1].length;
-        }
-
-        return `${currentFormatter(intValue)}${isDecimal ? seperators.decimal : ''}`;
-    }
-
-    const formatters = {
-        currency: {
-            format() {
-                return formatDecimals(formats.currency);
-            },
-            pattern: '\\$\\d{1,3}(,\\d{3})*',
-            prefix: '$',
-        },
-
-        currencyInt: {
-            format({ updateMask = true, newValue } = { updateMask: true, newValue: null }) {
-                let intValue;
-                intValue = parseInt((newValue || rawValue)?.replace(/[^\d.-]/g, '') || '', 10);
-
-                if (Number.isNaN(intValue)) {
-                    return '';
-                }
-
-
-                return formats.currencyInt(intValue);
-            },
-            pattern: '\\$\\d{1,3}(,\\d{3})*',
-            prefix: '$',
-        },
-
-        int: {
-            format() {
-                const intValue = parseInt(strippedValue, 10);
-                if (Number.isNaN(intValue)) {
-                    return '';
-                }
-
-                return formats.int(intValue);
-            },
-            pattern: '\\d{1,3}(,\\d{3})*',
-        },
-
-        number: {
-            format() {
-                return formatDecimals(formats.number);
-            },
-            pattern: '\\d{1,3}(,\\d{3})*(\\.\\d+)?$',
-        },
-
-        percent: {
-            format() {
-                const numberValue = parseFloat(strippedValue);
-                if (Number.isNaN(numberValue)) {
-                    return '';
-                }
-
-                const newValue = formatDecimals(formats.number);
-                return newValue;
-            },
-            suffix: '%',
-            pattern: '\\d*(\\.\\d+)?',
-        },
-
-        percentInt: {
-            format() {
-                const intValue = parseInt(strippedValue, 10);
-                if (Number.isNaN(intValue)) {
-                    return '';
-                }
-
-                return `${formats.int(intValue)}`;
-            },
-            suffix: '%',
-            pattern: '\\d+',
-        },
-    };
-
-    $: formatter = formatters[format];
-    $: prefix = format ? (formatters[format].prefix || '') : (prefix || '');
-    $: suffix = format ? (formatters[format].suffix || '') : (suffix || '');
-    $: usedPattern = required || strippedValue ? (format ? pattern || formatters[format].pattern : pattern) : null;
-
-    console.log('format', format)
-    let rawValue = formatters[format]?.prefix && !strippedValue ? '' : strippedValue;
-
-    $: updateValue(value);
-
-    function updateValue(_) {
+    function updateValue(..._: unknown[]) {
         setTimeout(() => {
             if (typeof value === 'number') {
-                value = value.toString();
+                value = `${value}`;
             }
 
             if (value === undefined) {
@@ -356,28 +66,29 @@
                 return;
             }
 
-
-            const newRaw = formatters[format].format({ updateMask: false, newValue: value });
-            if (newRaw && newRaw !== rawValue) {
-                inputElement.value = value;
+            const newRaw = formatterObject?.format(getInputValues(value));
+            if ((newRaw && newRaw !== rawValue) || (oldFormat !== format)) {
+                rawValue = value;
                 update();
             }
         });
     }
 
-    function update({ newValue } = { newValue: null }) {
+    function update() {
         const cursorPosBefore = inputElement.selectionStart;
         const originalLength = rawValue.length;
 
-        strippedValue = newValue !== undefined && newValue !== null ?  newValue : inputElement.value.replace(/[^\d.-]/g, '');
-        currentPattern = null;
+        oldFormat = format;
 
-        rawValue = formatters[format].format();
+        strippedValue = unformat(inputElement.value);
 
-        currentPattern = usedPattern;
+        rawValue = formatterObject?.format(getInputValues());
+
         const changeLength = rawValue.length - originalLength;
 
         value = rawValue
+
+        console.log(rawValue)
 
         if (changeLength !== 1) {
             setTimeout(() => {
@@ -398,13 +109,13 @@
 
     function updateMaskStyle() {
         setTimeout(() => {
-            if (!mask.isConnected) {
+            if (!mask?.isConnected) {
                 return;
             }
 
             const changes = {};
 
-            copiedStyles.forEach((prop) => {
+            STYLES.forEach((prop) => {
                 if (mask.style[prop] !== styles[prop]) {
                     changes[prop] = styles[prop]
                 }
@@ -412,7 +123,7 @@
 
             ['top', 'left', 'width', 'height'].forEach((dimension) => {
                 const prop = `offset${dimension.charAt(0).toUpperCase() + dimension.slice(1)}`;
-                if (mask.style[dimension] !== `${inputElement[prop]}px`) {
+                if (inputElement && mask.style[dimension] !== `${inputElement[prop]}px`) {
                     changes[dimension] = `${inputElement[prop]}px`;
                 }
             });
@@ -432,7 +143,7 @@
 
         Object.assign(
             mask.style,
-            backgroundStyles.reduce((copied, prop) => {
+            BACKGROUND_STYLES.reduce((copied, prop) => {
                 copied[prop] = styles[prop];
                 return copied;
             }, {}),
@@ -442,7 +153,7 @@
             poll = window.setInterval(updateMaskStyle, 200);
         }
 
-        events.forEach((event) => {
+        EVENTS.forEach((event) => {
             inputElement.addEventListener(event, updateMaskStyle);
         });
 
@@ -464,7 +175,7 @@
             clearInterval(poll);
         }
 
-        events.forEach((event) => {
+        EVENTS.forEach((event) => {
             inputElement?.removeEventListener(event, updateMaskStyle);
         });
 
@@ -519,5 +230,7 @@
     on:input
     on:keydown
     {placeholder}
+    inputmode="tel"
+    type="text"
     {...$$restProps}
 />
