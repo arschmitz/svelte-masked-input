@@ -3,7 +3,7 @@ export interface Seperators {
     group: string;
 }
 
-type FormatKeys = 'currency' | 'currencyInt' | 'int' | 'number' | 'percent' | 'percentInt';
+export type FormatKeys = 'currency' | 'currencyInt' | 'int' | 'number' | 'percent' | 'percentInt';
 
 export type FormatFunction = (input: Record<string, string | number>) => string;
 
