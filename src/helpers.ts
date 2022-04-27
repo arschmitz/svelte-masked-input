@@ -3,11 +3,11 @@ export interface Seperators {
     group: string;
 }
 
-export type FormatKeys = 'currency' | 'currencyInt' | 'int' | 'number' | 'percent' | 'percentInt';
+export type Formats = 'currency' | 'currencyInt' | 'int' | 'number' | 'percent' | 'percentInt';
 
 export type FormatFunction = (input: Record<string, string | number>) => string;
 
-type Formats = Record<FormatKeys, FormatFunction>;
+type FormatsObject = Record<Formats, FormatFunction>;
 
 interface FormatDecimalsInput {
     elementValue: string;
@@ -33,7 +33,7 @@ export interface Formatter {
     suffix?: string;
 }
 
-export type Formatters = Record<FormatKeys, Formatter>;
+export type Formatters = Record<Formats, Formatter>;
 
 function getFractionDigits(number) {
     return String(number).split('.')[1]?.length;
@@ -99,7 +99,7 @@ function getSignificantDigitCount(n, decimal) {
 export function formatConstructor(
     { currency, formatOptions, locale }:
     { currency: string; formatOptions: Record<string, unknown>; locale: string; }
-): Formats {
+): FormatsObject {
     return {
         currency({ input }): string {
             const options = {
@@ -178,7 +178,7 @@ export function formatConstructor(
     };
 }
 
-export function formatterConstructor(formats: Formats): Formatters {
+export function formatterConstructor(formats: FormatsObject): Formatters {
     return {
         currency: {
             format(values): string {
