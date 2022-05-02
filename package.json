@@ -2,7 +2,7 @@
   "name": "svelte-masked-input",
   "version": "0.0.1",
   "description": "Input Masking and Formatted inputs for Svelte with no dependencies",
-  "main": "src/components/MaskedInput.svelte",
+  "main": "index.js",
   "scripts": {
     "build": "cross-env NODE_ENV=production webpack",
     "lint": "eslint --ext .ts,.svelte",

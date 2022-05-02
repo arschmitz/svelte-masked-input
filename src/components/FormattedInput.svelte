@@ -1,8 +1,12 @@
+<script lang="ts" context="module">
+    let inputId = 1;
+</script>
+
 <script lang="ts">
     import type { Formatter, Formatters, Seperators } from '../helpers';
     import { afterUpdate, onDestroy, onMount, tick } from "svelte";
     import { BACKGROUND_STYLES, EVENTS, STYLES } from '../constants';
-    import { unformat, getSeperators, formatConstructor, formatterConstructor } from '../helpers';
+    import { createStyleElement, unformat, getSeperators, formatConstructor, formatterConstructor } from '../helpers';
 
     export let currency = 'USD';
     export let format = '';
@@ -15,9 +19,13 @@
     export let prefix = '';
     export let value: string| number = '';
     export let strippedValue = '';
+    export let disabledClass = 'disabled';
+    export let disabled = false;
 
     let _class = '';
     export { _class as class };
+
+    const id = ++inputId;
 
     let seperators: Seperators;
     let mask: HTMLSpanElement;
@@ -26,6 +34,7 @@
     let formatters: Formatters;
     let formatterObject: Formatter;
     let oldFormat: string;
+    let styleElement: HTMLStyleElement;
 
     if (typeof value === 'number') {
         value = `${value}`;
@@ -39,6 +48,7 @@
     $: formatterObject = formatters[format] || formatter;
     $: prefix = format ? (formatterObject?.prefix || '') : (prefix || '');
     $: suffix = format ? (formatterObject?.suffix || '') : (suffix || '');
+    $: updateMaskStyle(disabled);
 
     let rawValue = formatterObject?.prefix && !strippedValue ? '' : strippedValue;
 
@@ -105,7 +115,10 @@
         return update();
     }
 
-    function updateMaskStyle() {
+    function updateMaskStyle(..._: unknown[]) {
+        if (mask) {
+            mask.classList.remove('copied');
+        }
         setTimeout(() => {
             if (!mask?.isConnected) {
                 return;
@@ -113,11 +126,18 @@
 
             const changes = {};
 
-            STYLES.forEach((prop) => {
-                if (mask.style[prop] !== styles[prop]) {
-                    changes[prop] = styles[prop]
-                }
-            });
+            const newStyleElement = createStyleElement({ id, styles });
+
+            if (styleElement) {
+
+                console.log('replace')
+                styleElement.replaceWith(newStyleElement);
+            } else {
+                console.log('prepend')
+                mask.append(newStyleElement);
+            }
+
+            styleElement = newStyleElement;
 
             ['top', 'left', 'width', 'height'].forEach((dimension) => {
                 const prop = `offset${dimension.charAt(0).toUpperCase() + dimension.slice(1)}`;
@@ -126,14 +146,24 @@
                 }
             });
 
+            console.log('update')
+
+            mask.classList[disabled ? 'add' : 'remove'](disabledClass);
+
+            Object.assign(
+                mask.style,
+                BACKGROUND_STYLES.reduce((copied, prop) => {
+                    copied[prop] = styles[prop];
+                    return copied;
+                }, {}),
+            );
+
             if (!Object.keys(changes).length) {
                 return;
             }
 
             Object.assign(mask.style, changes);
-
-            inputElement.style.background = 'none';
-        });
+        }, 1);
     }
 
     onMount(() => {
@@ -146,6 +176,8 @@
                 return copied;
             }, {}),
         );
+
+        inputElement.classList.add('copied');
 
         if (polling) {
             poll = window.setInterval(updateMaskStyle, 200);
@@ -164,6 +196,7 @@
 
     afterUpdate(() => {
         if (!polling) {
+            console.log('after')
             updateMaskStyle();
         }
     });
@@ -204,6 +237,12 @@
         box-sizing: border-box;
     }
 
+    .copied {
+        background: none !important;
+        background-color: transparent !important;
+        background-image: none !important;
+    }
+
     .suffix {
         color: initial;
     }
@@ -211,6 +250,7 @@
 
 <span
     aria-hidden="true"
+    data-formatted-id={id}
     class="formatted-input-mask"
     bind:this={mask}
 >
@@ -222,6 +262,7 @@
     bind:this={inputElement}
     bind:value={rawValue}
     class={_class}
+    {disabled}
     on:blur
     on:change
     on:focus

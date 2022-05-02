@@ -1,3 +1,5 @@
+import { STYLES } from './constants';
+
 export interface Seperators {
     decimal: string;
     group: string;
@@ -43,6 +45,20 @@ function truncateFractionDigits(number, digits) {
     const [int, decimal] = `${number}`.split('.');
 
     return parseFloat(`${int}.${decimal.substring(0, digits)}`);
+}
+
+export function createStyleElement({ id, styles }): HTMLStyleElement {
+    let styleBody = '';
+    STYLES.forEach((prop) => {
+        styleBody += `${prop}: ${styles[prop]}; `;
+    });
+
+    const styleClass = `.formatted-input-mask[data-formatted-id="${id}"] { ${styleBody} }`;
+    const style = document.createElement('style');
+    style.type = 'text/css';
+    style.appendChild(document.createTextNode(styleClass));
+
+    return style;
 }
 
 export function getSeperators(locale: string): Seperators {
