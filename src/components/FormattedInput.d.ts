@@ -2,6 +2,7 @@ import { SvelteComponentTyped } from 'svelte';
 import { Formats } from '../helpers';
 
 export interface FormattedInputProps {
+    class: string;
     currency: string;
     disabled: boolean;
     disabledClass: string;
