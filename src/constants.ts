@@ -86,14 +86,14 @@ export const EVENTS = [
     'blur',
 ];
 
-export const INTEGAR_FORMATS = ['currencyInt', 'int', 'percentInt'] as const;
-type IntFormatTuple = typeof INTEGAR_FORMATS;
+export const INTEGER_FORMATS = ['currencyInt', 'int', 'percentInt'] as const;
+type IntFormatTuple = typeof INTEGER_FORMATS;
 export type IntFormat = IntFormatTuple[number];
 
 export const DECIMAL_FORMATS = ['currency', 'number', 'percent'] as const;
 type DecimalFormatTuple = typeof DECIMAL_FORMATS;
 export type DecimalFormat = DecimalFormatTuple[number];
 
-export const FORMATS = [...INTEGAR_FORMATS, ...DECIMAL_FORMATS] as const;
+export const FORMATS = [...INTEGER_FORMATS, ...DECIMAL_FORMATS] as const;
 type FormatTuple = typeof FORMATS;
 export type Format = FormatTuple[number];
