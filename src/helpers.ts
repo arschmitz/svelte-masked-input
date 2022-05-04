@@ -97,7 +97,14 @@ export function formatDecimals(
     return `${formatter({ input: intValue, significantDigits })}${isDecimal ? seperators.decimal : ''}`;
 }
 
-function getSignificantDigitCount(n, decimal) {
+export function getCurrencySymbol(currency: string): string {
+    const symbol = new Intl.NumberFormat('en', { currency, style: 'currency' })
+        .formatToParts(1)
+        .find((x) => x.type === 'currency');
+    return symbol && symbol.value;
+}
+
+export function getSignificantDigitCount(n: string | number, decimal: string): number {
     n = Math.abs(parseFloat(String(n).replace(decimal, '')));
 
     if (n === 0) {
