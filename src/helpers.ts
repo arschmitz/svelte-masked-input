@@ -1,4 +1,4 @@
-import { STYLES } from './constants';
+import { BACKGROUND_STYLES, STYLES } from './constants';
 
 export interface Seperators {
     decimal: string;
@@ -47,9 +47,9 @@ function truncateFractionDigits(number, digits) {
     return parseFloat(`${int}.${decimal.substring(0, digits)}`);
 }
 
-export function createStyleElement({ id, styles }): HTMLStyleElement {
+export function createStyleElement({ id, styles }: { id: number; styles: CSSStyleDeclaration; }): HTMLStyleElement {
     let styleBody = '';
-    STYLES.forEach((prop) => {
+    STYLES.concat(BACKGROUND_STYLES).forEach((prop) => {
         styleBody += `${prop}: ${styles[prop]}; `;
     });
 

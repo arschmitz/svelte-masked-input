@@ -4,8 +4,8 @@
 
 <script lang="ts">
     import type { Formatter, Formatters, Seperators } from '../helpers';
-    import { afterUpdate, onDestroy, onMount, tick } from "svelte";
-    import { BACKGROUND_STYLES, EVENTS, STYLES } from '../constants';
+    import { afterUpdate, onDestroy, onMount } from "svelte";
+    import { EVENTS } from '../constants';
     import { createStyleElement, unformat, getSeperators, formatConstructor, formatterConstructor } from '../helpers';
 
     export let currency = 'USD';
@@ -116,8 +116,8 @@
     }
 
     function updateMaskStyle(..._: unknown[]) {
-        if (mask) {
-            mask.classList.remove('copied');
+        if (inputElement) {
+            inputElement.classList.remove('copied');
         }
         setTimeout(() => {
             if (!mask?.isConnected) {
@@ -126,14 +126,15 @@
 
             const changes = {};
 
+            if (inputElement.classList.contains('copied')) {
+                return;
+            }
+
             const newStyleElement = createStyleElement({ id, styles });
 
             if (styleElement) {
-
-                console.log('replace')
                 styleElement.replaceWith(newStyleElement);
             } else {
-                console.log('prepend')
                 mask.append(newStyleElement);
             }
 
@@ -146,38 +147,19 @@
                 }
             });
 
-            console.log('update')
-
             mask.classList[disabled ? 'add' : 'remove'](disabledClass);
-
-            Object.assign(
-                mask.style,
-                BACKGROUND_STYLES.reduce((copied, prop) => {
-                    copied[prop] = styles[prop];
-                    return copied;
-                }, {}),
-            );
+            inputElement.classList.add('copied');
 
             if (!Object.keys(changes).length) {
                 return;
             }
 
             Object.assign(mask.style, changes);
-        }, 1);
+        }, 1000);
     }
 
     onMount(() => {
         styles = getComputedStyle(inputElement);
-
-        Object.assign(
-            mask.style,
-            BACKGROUND_STYLES.reduce((copied, prop) => {
-                copied[prop] = styles[prop];
-                return copied;
-            }, {}),
-        );
-
-        inputElement.classList.add('copied');
 
         if (polling) {
             poll = window.setInterval(updateMaskStyle, 200);
@@ -196,7 +178,6 @@
 
     afterUpdate(() => {
         if (!polling) {
-            console.log('after')
             updateMaskStyle();
         }
     });
