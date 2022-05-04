@@ -5,11 +5,21 @@ export interface Seperators {
     group: string;
 }
 
-export type Formats = 'currency' | 'currencyInt' | 'int' | 'number' | 'percent' | 'percentInt';
+export const intFormats = ['currencyInt', 'int', 'percentInt'] as const;
+type IntFormatTuple = typeof intFormats;
+export type IntFormat = IntFormatTuple[number];
+
+export const decimalFormats = ['currency', 'number', 'percent'] as const;
+type DecimalFormatTuple = typeof decimalFormats;
+export type DecimalFormat = DecimalFormatTuple[number];
+
+export const formats = [...intFormats, ...decimalFormats] as const;
+type FormatTuple = typeof formats;
+export type Format = FormatTuple[number];
 
 export type FormatFunction = (input: Record<string, string | number>) => string;
 
-type FormatsObject = Record<Formats, FormatFunction>;
+type FormatsObject = Record<Format, FormatFunction>;
 
 interface FormatDecimalsInput {
     elementValue: string;
@@ -35,7 +45,7 @@ export interface Formatter {
     suffix?: string;
 }
 
-export type Formatters = Record<Formats, Formatter>;
+export type Formatters = Record<Format, Formatter>;
 
 function getFractionDigits(number) {
     return String(number).split('.')[1]?.length;
@@ -194,11 +204,11 @@ export function formatConstructor(
     };
 }
 
-export function formatterConstructor(formats: FormatsObject): Formatters {
+export function formatterConstructor(formatObject: FormatsObject): Formatters {
     return {
         currency: {
             format(values): string {
-                return formatDecimals({ ...values, formatter: formats.currency });
+                return formatDecimals({ ...values, formatter: formatObject.currency });
             },
             pattern: '\\$\\d{1,3}(,\\d{3})*',
             prefix: '$',
@@ -212,7 +222,7 @@ export function formatterConstructor(formats: FormatsObject): Formatters {
                     return '';
                 }
 
-                return formats.currencyInt({ input: intValue });
+                return formatObject.currencyInt({ input: intValue });
             },
             pattern: '\\$\\d{1,3}(,\\d{3})*',
             prefix: '$',
@@ -225,14 +235,14 @@ export function formatterConstructor(formats: FormatsObject): Formatters {
                     return '';
                 }
 
-                return formats.int({ input: intValue });
+                return formatObject.int({ input: intValue });
             },
             pattern: '\\d{1,3}(,\\d{3})*',
         },
 
         number: {
             format(values): string {
-                return formatDecimals({ ...values, formatter: formats.number });
+                return formatDecimals({ ...values, formatter: formatObject.number });
             },
             pattern: '\\d{1,3}(,\\d{3})*(\\.\\d+)?$',
         },
@@ -244,7 +254,7 @@ export function formatterConstructor(formats: FormatsObject): Formatters {
                     return '';
                 }
 
-                const newValue = formatDecimals({ ...values, formatter: formats.number, strippedValue });
+                const newValue = formatDecimals({ ...values, formatter: formatObject.number, strippedValue });
                 return newValue;
             },
             pattern: '\\d*(\\.\\d+)?',
@@ -258,7 +268,7 @@ export function formatterConstructor(formats: FormatsObject): Formatters {
                     return '';
                 }
 
-                return `${formats.int({ input: intValue })}`;
+                return `${formatObject.int({ input: intValue })}`;
             },
             pattern: '\\d+',
             suffix: '%',

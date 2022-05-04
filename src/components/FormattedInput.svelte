@@ -155,7 +155,7 @@
             }
 
             Object.assign(mask.style, changes);
-        }, 1000);
+        }, 1);
     }
 
     onMount(() => {
