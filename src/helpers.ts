@@ -1,21 +1,10 @@
+import type { Format } from './constants';
 import { BACKGROUND_STYLES, STYLES } from './constants';
 
 export interface Seperators {
     decimal: string;
     group: string;
 }
-
-export const intFormats = ['currencyInt', 'int', 'percentInt'] as const;
-type IntFormatTuple = typeof intFormats;
-export type IntFormat = IntFormatTuple[number];
-
-export const decimalFormats = ['currency', 'number', 'percent'] as const;
-type DecimalFormatTuple = typeof decimalFormats;
-export type DecimalFormat = DecimalFormatTuple[number];
-
-export const formats = [...intFormats, ...decimalFormats] as const;
-type FormatTuple = typeof formats;
-export type Format = FormatTuple[number];
 
 export type FormatFunction = (input: Record<string, string | number>) => string;
 
