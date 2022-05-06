@@ -1,7 +1,7 @@
 import type { Format } from './constants';
 import { BACKGROUND_STYLES, STYLES } from './constants';
 
-export interface Seperators {
+export interface Saperators {
     decimal: string;
     group: string;
 }
@@ -15,7 +15,7 @@ interface FormatDecimalsInput {
     formatter: FormatFunction;
     newValue: string;
     rawValue: string;
-    seperators: Seperators;
+    separators: Saperators;
     strippedValue: string;
 }
 
@@ -23,7 +23,7 @@ interface FormatInput {
     elementValue: string;
     newValue: string;
     rawValue: string;
-    seperators: Seperators;
+    separators: Saperators;
     strippedValue: string;
 }
 
@@ -60,7 +60,7 @@ export function createStyleElement({ id, styles }: { id: number; styles: CSSStyl
     return style;
 }
 
-export function getSeperators(locale: string): Seperators {
+export function getSeparators(locale: string): Saperators {
     const numberWithGroupAndDecimalSeparator = 1000.1;
     return Intl.NumberFormat(locale)
         .formatToParts(numberWithGroupAndDecimalSeparator)
@@ -70,22 +70,22 @@ export function getSeperators(locale: string): Seperators {
             }
 
             return collection;
-        }, {}) as Seperators;
+        }, {}) as Saperators;
 }
 
 const log10 = Math.log(10);
 
 export function formatDecimals(
-    { formatter, strippedValue, elementValue, rawValue, seperators, newValue }: FormatDecimalsInput
+    { formatter, strippedValue, elementValue, rawValue, separators, newValue }: FormatDecimalsInput
 ): string {
-    const decimalEndRegExp = new RegExp(`\\${seperators.decimal}$`);
-    const decimalRegExp = new RegExp(`\\${seperators.decimal}`);
+    const decimalEndRegExp = new RegExp(`\\${separators.decimal}$`);
+    const decimalRegExp = new RegExp(`\\${separators.decimal}`);
     const isDecimal = decimalEndRegExp.test(newValue || elementValue);
     const hasDecimal = decimalRegExp.test(newValue || elementValue);
     const usedValue = isDecimal ? (newValue || strippedValue).slice(0, -1) : (newValue || strippedValue);
     const intValue = parseFloat(usedValue);
     const digits = intValue > 0
-        ? getSignificantDigitCount(strippedValue, seperators.decimal) + 1
+        ? getSignificantDigitCount(strippedValue, separators.decimal) + 1
         : Math.min(4, hasDecimal ? strippedValue.length - 1 : strippedValue.length);
 
     if (Number.isNaN(intValue)) {
@@ -94,7 +94,7 @@ export function formatDecimals(
 
     const significantDigits = !/0$/.test(rawValue) ? undefined : digits;
 
-    return `${formatter({ input: intValue, significantDigits })}${isDecimal ? seperators.decimal : ''}`;
+    return `${formatter({ input: intValue, significantDigits })}${isDecimal ? separators.decimal : ''}`;
 }
 
 export function getCurrencySymbol(currency: string): string {
