@@ -1,7 +1,7 @@
 import type { Format } from './constants';
 import { BACKGROUND_STYLES, STYLES } from './constants';
 
-export interface Saperators {
+export interface Separators {
     decimal: string;
     group: string;
 }
@@ -15,7 +15,7 @@ interface FormatDecimalsInput {
     formatter: FormatFunction;
     newValue: string;
     rawValue: string;
-    separators: Saperators;
+    separators: Separators;
     strippedValue: string;
 }
 
@@ -23,7 +23,7 @@ interface FormatInput {
     elementValue: string;
     newValue: string;
     rawValue: string;
-    separators: Saperators;
+    separators: Separators;
     strippedValue: string;
 }
 
@@ -60,7 +60,7 @@ export function createStyleElement({ id, styles }: { id: number; styles: CSSStyl
     return style;
 }
 
-export function getSeparators(locale: string): Saperators {
+export function getSeparators(locale: string): Separators {
     const numberWithGroupAndDecimalSeparator = 1000.1;
     return Intl.NumberFormat(locale)
         .formatToParts(numberWithGroupAndDecimalSeparator)
@@ -70,7 +70,7 @@ export function getSeparators(locale: string): Saperators {
             }
 
             return collection;
-        }, {}) as Saperators;
+        }, {}) as Separators;
 }
 
 const log10 = Math.log(10);

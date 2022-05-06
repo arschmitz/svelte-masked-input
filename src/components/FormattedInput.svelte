@@ -3,10 +3,10 @@
 </script>
 
 <script lang="ts">
-    import type { Formatter, Formatters, Seperators } from '../helpers';
+    import type { Formatter, Formatters, Separators } from '../helpers';
     import { afterUpdate, onDestroy, onMount } from "svelte";
     import { EVENTS } from '../constants';
-    import { createStyleElement, unformat, getSeperators, formatConstructor, formatterConstructor } from '../helpers';
+    import { createStyleElement, unformat, getSeparators, formatConstructor, formatterConstructor } from '../helpers';
 
     export let currency = 'USD';
     export let format = '';
@@ -27,7 +27,7 @@
 
     const id = ++inputId;
 
-    let seperators: Seperators;
+    let separators: Separators;
     let mask: HTMLSpanElement;
     let poll: number;
     let styles: CSSStyleDeclaration;
@@ -42,7 +42,7 @@
 
     $: formats = formatConstructor({ currency, formatOptions, locale });
     strippedValue = unformat(value);
-    $: seperators = getSeperators(locale);
+    $: separators = getSeparators(locale);
     $: formatters = formatterConstructor(formats);
 
     $: formatterObject = formatters[format] || formatter;
@@ -60,7 +60,7 @@
             newValue,
             rawValue,
             strippedValue,
-            seperators
+            separators
         }
     }
 
