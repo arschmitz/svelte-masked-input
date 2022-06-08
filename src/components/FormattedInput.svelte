@@ -35,6 +35,7 @@
     let formatterObject: Formatter;
     let oldFormat: string;
     let styleElement: HTMLStyleElement;
+    let oldValue: string;
 
     if (typeof value === 'number') {
         value = `${value}`;
@@ -100,11 +101,19 @@
 
         if (changeLength !== 1) {
             setTimeout(() => {
+                if (!inputElement) {
+                    return;
+                }
+
                 inputElement.selectionStart = cursorPosBefore;
                 inputElement.selectionEnd = cursorPosBefore;
             })
         } else {
             setTimeout(() => {
+                if (!inputElement) {
+                    return;
+                }
+
                 inputElement.selectionStart = cursorPosBefore + 1;
                 inputElement.selectionEnd = cursorPosBefore + 1;
             })
@@ -120,7 +129,7 @@
             inputElement.classList.remove('copied');
         }
         setTimeout(() => {
-            if (!mask?.isConnected) {
+            if (!mask?.isConnected || !inputElement) {
                 return;
             }
 
@@ -158,6 +167,18 @@
         }, 1);
     }
 
+    function handleSafariBlur() {
+        if (!inputElement || inputElement.value === oldValue) {
+            return;
+        }
+
+        inputElement.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    function handleSafariFocus() {
+        oldValue = inputElement.value;
+    }
+
     onMount(() => {
         styles = getComputedStyle(inputElement);
 
@@ -170,6 +191,12 @@
         });
 
         inputElement.addEventListener('input', _update);
+
+        // Would prefer to use feature detection but this does not seem possible
+        if (/^((?!chrome|android).)*safari/i.test(navigator.userAgent)) {
+            inputElement.addEventListener('focus', handleSafariFocus)
+            inputElement.addEventListener('blur', handleSafariBlur);
+        }
 
         document.fonts.ready.then(updateMaskStyle);
 
@@ -191,6 +218,8 @@
             inputElement?.removeEventListener(event, updateMaskStyle);
         });
 
+        inputElement?.removeEventListener('blur', handleSafariBlur);
+        inputElement?.removeEventListener('focus', handleSafariFocus);
         inputElement?.removeEventListener('input', _update);
     });
 </script>
