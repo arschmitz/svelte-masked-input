@@ -192,7 +192,7 @@
 
         inputElement.addEventListener('input', _update);
 
-        // Would prefre to use feature detection but this does not seem possible
+        // Would prefer to use feature detection but this does not seem possible
         if (/^((?!chrome|android).)*safari/i.test(navigator.userAgent)) {
             inputElement.addEventListener('focus', handleSafariFocus)
             inputElement.addEventListener('blur', handleSafariBlur);
