@@ -100,11 +100,19 @@
 
         if (changeLength !== 1) {
             setTimeout(() => {
+                if (!inputElement) {
+                    return;
+                }
+
                 inputElement.selectionStart = cursorPosBefore;
                 inputElement.selectionEnd = cursorPosBefore;
             })
         } else {
             setTimeout(() => {
+                if (!inputElement) {
+                    return;
+                }
+
                 inputElement.selectionStart = cursorPosBefore + 1;
                 inputElement.selectionEnd = cursorPosBefore + 1;
             })
@@ -120,7 +128,7 @@
             inputElement.classList.remove('copied');
         }
         setTimeout(() => {
-            if (!mask?.isConnected) {
+            if (!mask?.isConnected || !inputElement) {
                 return;
             }
 
@@ -158,6 +166,14 @@
         }, 1);
     }
 
+    function handleSafariBlur() {
+        if (!inputElement) {
+            return;
+        }
+
+        inputElement.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
     onMount(() => {
         styles = getComputedStyle(inputElement);
 
@@ -170,6 +186,11 @@
         });
 
         inputElement.addEventListener('input', _update);
+
+        // Would prefre to use feature detection but this does not seem possible
+        if (/^((?!chrome|android).)*safari/i.test(navigator.userAgent)) {
+            inputElement.addEventListener('blur', handleSafariBlur);
+        }
 
         document.fonts.ready.then(updateMaskStyle);
 
@@ -191,6 +212,7 @@
             inputElement?.removeEventListener(event, updateMaskStyle);
         });
 
+        inputElement?.removeEventListener('blur', handleSafariBlur);
         inputElement?.removeEventListener('input', _update);
     });
 </script>
