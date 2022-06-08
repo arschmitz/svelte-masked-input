@@ -35,6 +35,7 @@
     let formatterObject: Formatter;
     let oldFormat: string;
     let styleElement: HTMLStyleElement;
+    let oldValue: string;
 
     if (typeof value === 'number') {
         value = `${value}`;
@@ -167,11 +168,15 @@
     }
 
     function handleSafariBlur() {
-        if (!inputElement) {
+        if (!inputElement || inputElement.value === oldValue) {
             return;
         }
 
         inputElement.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    function handleSafariFocus() {
+        oldValue = inputElement.value;
     }
 
     onMount(() => {
@@ -189,6 +194,7 @@
 
         // Would prefre to use feature detection but this does not seem possible
         if (/^((?!chrome|android).)*safari/i.test(navigator.userAgent)) {
+            inputElement.addEventListener('focus', handleSafariFocus)
             inputElement.addEventListener('blur', handleSafariBlur);
         }
 
@@ -213,6 +219,7 @@
         });
 
         inputElement?.removeEventListener('blur', handleSafariBlur);
+        inputElement?.removeEventListener('focus', handleSafariFocus);
         inputElement?.removeEventListener('input', _update);
     });
 </script>
