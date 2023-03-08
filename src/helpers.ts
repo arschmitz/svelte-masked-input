@@ -4,11 +4,21 @@ import { BACKGROUND_STYLES, STYLES } from './constants';
 export interface Separators {
     decimal: string;
     group: string;
+    integer: number;
+    literal: string;
+    position?: string;
+    symbol: string;
 }
 
 export type FormatFunction = (input: Record<string, string | number>) => string;
 
-type FormatsObject = Record<Format, FormatFunction>;
+type Options = { currency: string; formatOptions: Intl.NumberFormatOptions; locale: string; };
+
+type BaseFormatObject = Record<Format, FormatFunction>;
+
+interface FormatsObject extends BaseFormatObject {
+    options: Options;
+}
 
 interface FormatDecimalsInput {
     elementValue: string;
@@ -36,12 +46,12 @@ export interface Formatter {
 
 export type Formatters = Record<Format, Formatter>;
 
-function getFractionDigits(number) {
-    return String(number).split('.')[1]?.length;
+function getFractionDigits(number, separator) {
+    return String(number).split(separator)[1]?.length;
 }
 
-function truncateFractionDigits(number, digits) {
-    const [int, decimal] = `${number}`.split('.');
+function truncateFractionDigits(number, digits, separator) {
+    const [int, decimal] = `${number}`.split(separator);
 
     return parseFloat(`${int}.${decimal.substring(0, digits)}`);
 }
@@ -60,17 +70,27 @@ export function createStyleElement({ id, styles }: { id: number; styles: CSSStyl
     return style;
 }
 
-export function getSeparators(locale: string): Separators {
-    const numberWithGroupAndDecimalSeparator = 1000.1;
-    return Intl.NumberFormat(locale)
-        .formatToParts(numberWithGroupAndDecimalSeparator)
-        .reduce((collection, part) => {
-            if (part.type === 'decimal' || part.type === 'group') {
-                collection[part.type] = part.value;
-            }
+export function getSeparators(locale: string, currency: string): Record<'currency' | 'percent' | 'number', Separators> {
+    return {
+        currency: getParts(locale, { currency, style: 'currency' }),
+        number: getParts(locale, { currency }),
+        percent: getParts(locale, { currency, style: 'percent' }),
+    };
+}
 
-            return collection;
-        }, {}) as Separators;
+function getParts(locale: string, options): Separators {
+    const numberWithGroupAndDecimalSeparator = 10000.1;
+    const parts = Intl.NumberFormat(locale, options).formatToParts(numberWithGroupAndDecimalSeparator);
+    return parts.reduce((collection, part, index) => {
+        if (['currency', 'percentSign'].includes(part.type)) {
+            collection.symbol = part.value;
+            collection.position = index === 0 ? 'beginning' : 'end';
+        } else if (part.type !== 'integer') {
+            collection[part.type] = part.value;
+        }
+
+        return collection;
+    }, {} as Partial<Separators>) as Separators;
 }
 
 const log10 = Math.log(10);
@@ -97,13 +117,6 @@ export function formatDecimals(
     return `${formatter({ input: intValue, significantDigits })}${isDecimal ? separators.decimal : ''}`;
 }
 
-export function getCurrencySymbol(currency: string): string {
-    const symbol = new Intl.NumberFormat('en', { currency, style: 'currency' })
-        .formatToParts(1)
-        .find((x) => x.type === 'currency');
-    return symbol && symbol.value;
-}
-
 export function getSignificantDigitCount(n: string | number, decimal: string): number {
     n = Math.abs(parseFloat(String(n).replace(decimal, '')));
 
@@ -118,9 +131,42 @@ export function getSignificantDigitCount(n: string | number, decimal: string): n
     return Math.floor(Math.log(n) / log10) + 1;
 }
 
+function getFix(type, formatObject: FormatsObject, position) {
+    const { currency, locale } = formatObject.options;
+    const separators = getSeparators(locale, currency)[type];
+    const { symbol } = separators;
+
+    if (separators.position === 'begining' && position === 'prefix') {
+        return `${symbol}${separators.literal || ''}`;
+    }
+
+    if (separators.position === 'end' && position === 'suffix') {
+        return `${separators.literal || ''}${symbol}`;
+    }
+
+    return '';
+}
+
+function getLabel(type, formatObject: FormatsObject, value: string): string {
+    if (!value) {
+        return ' ';
+    }
+    const { currency, locale } = formatObject.options;
+    const separators = getSeparators(locale, currency)[type];
+
+    if (separators.position === 'end') {
+        value = value.replace(separators.symbol, '');
+
+        if (separators.literal) {
+            value = value.replace(new RegExp(`${separators.literal}$`), '');
+        }
+    }
+
+    return value;
+}
+
 export function formatConstructor(
-    { currency, formatOptions, locale }:
-    { currency: string; formatOptions: Record<string, unknown>; locale: string; }
+    { currency, formatOptions, locale }: Options
 ): FormatsObject {
     return {
         currency({ input }): string {
@@ -133,9 +179,11 @@ export function formatConstructor(
             };
 
             const { maximumFractionDigits } = options;
+            console.log('currency', currency);
+            const separators = getSeparators(locale, currency).currency;
 
-            if (getFractionDigits(input) >= maximumFractionDigits) {
-                input = truncateFractionDigits(input, maximumFractionDigits);
+            if (getFractionDigits(input, separators.decimal) >= maximumFractionDigits) {
+                input = truncateFractionDigits(input, maximumFractionDigits, separators.decimal);
             }
 
             const formatFunction = new Intl.NumberFormat(locale, options);
@@ -172,14 +220,21 @@ export function formatConstructor(
             };
 
             const { maximumFractionDigits } = options;
+            console.log('number', currency);
+            const separators = getSeparators(locale, currency).number;
 
-            if (getFractionDigits(input) >= maximumFractionDigits) {
-                input = truncateFractionDigits(input, maximumFractionDigits);
+            if (getFractionDigits(input, separators.decimal) >= maximumFractionDigits) {
+                input = truncateFractionDigits(input, maximumFractionDigits, separators.decimal);
             }
 
             const formatFunction = new Intl.NumberFormat(locale, options);
 
             return formatFunction.format(input as number);
+        },
+        options: {
+            currency,
+            formatOptions,
+            locale,
         },
         percent({ input }): string {
             const formatFunction = new Intl.NumberFormat(locale, {
@@ -204,10 +259,13 @@ export function formatterConstructor(formatObject: FormatsObject): Formatters {
     return {
         currency: {
             format(values): string {
-                return formatDecimals({ ...values, formatter: formatObject.currency });
+                const value = formatDecimals({ ...values, formatter: formatObject.currency });
+
+                return getLabel('currency', formatObject, value);
             },
             pattern: '\\$\\d{1,3}(,\\d{3})*',
-            prefix: '$',
+            prefix: getFix('currency', formatObject, 'prefix'),
+            suffix: getFix('currency', formatObject, 'suffix'),
         },
 
         currencyInt: {
@@ -218,10 +276,13 @@ export function formatterConstructor(formatObject: FormatsObject): Formatters {
                     return '';
                 }
 
-                return formatObject.currencyInt({ input: intValue });
+                const value = formatObject.currencyInt({ input: intValue });
+
+                return getLabel('currency', formatObject, value);
             },
             pattern: '\\$\\d{1,3}(,\\d{3})*',
-            prefix: '$',
+            prefix: getFix('currency', formatObject, 'prefix'),
+            suffix: getFix('currency', formatObject, 'suffix'),
         },
 
         int: {
@@ -250,11 +311,12 @@ export function formatterConstructor(formatObject: FormatsObject): Formatters {
                     return '';
                 }
 
-                const newValue = formatDecimals({ ...values, formatter: formatObject.number, strippedValue });
-                return newValue;
+                const value = formatDecimals({ ...values, formatter: formatObject.number, strippedValue });
+                return getLabel('percent', formatObject, value);
             },
             pattern: '\\d*(\\.\\d+)?',
-            suffix: '%',
+            prefix: getFix('percent', formatObject, 'prefix'),
+            suffix: getFix('percent', formatObject, 'suffix'),
         },
 
         percentInt: {
@@ -264,10 +326,15 @@ export function formatterConstructor(formatObject: FormatsObject): Formatters {
                     return '';
                 }
 
-                return `${formatObject.int({ input: intValue })}`;
+                return getLabel(
+                    'percent',
+                    formatObject,
+                    formatObject.percentInt({ input: intValue })
+                );
             },
             pattern: '\\d+',
-            suffix: '%',
+            prefix: getFix('percent', formatObject, 'prefix'),
+            suffix: getFix('percent', formatObject, 'suffix'),
         },
     };
 }

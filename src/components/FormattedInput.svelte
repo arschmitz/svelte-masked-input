@@ -3,14 +3,14 @@
 </script>
 
 <script lang="ts">
-    import type { Formatter, Formatters, Separators } from '../helpers';
+    import type { Formatter, Formatters } from '../helpers';
     import { afterUpdate, onDestroy, onMount } from "svelte";
     import { EVENTS } from '../constants';
-    import { createStyleElement, unformat, getSeparators, formatConstructor, formatterConstructor } from '../helpers';
+    import { createStyleElement, unformat, formatConstructor, formatterConstructor } from '../helpers';
 
     export let currency = 'USD';
     export let format = '';
-    export let formatOptions: Record<string, number | string> = {};
+    export let formatOptions: Intl.NumberFormatOptions = {};
     export let formatter: Formatter = null;
     export let inputElement: HTMLInputElement = null;
     export let locale = 'en-us';
@@ -27,7 +27,6 @@
 
     const id = ++inputId;
 
-    let separators: Separators;
     let mask: HTMLSpanElement;
     let poll: number;
     let styles: CSSStyleDeclaration;
@@ -43,7 +42,6 @@
 
     $: formats = formatConstructor({ currency, formatOptions, locale });
     strippedValue = unformat(value);
-    $: separators = getSeparators(locale);
     $: formatters = formatterConstructor(formats);
 
     $: formatterObject = formatters[format] || formatter;
@@ -60,8 +58,7 @@
             elementValue: inputElement?.value,
             newValue,
             rawValue,
-            strippedValue,
-            separators
+            strippedValue
         }
     }
 
