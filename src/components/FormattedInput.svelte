@@ -3,17 +3,18 @@
 </script>
 
 <script lang="ts">
-    import type { Formatter, Formatters, Separators } from '../helpers';
+    import type { Formatter, Formatters } from '../types';
     import { afterUpdate, onDestroy, onMount } from "svelte";
     import { EVENTS } from '../constants';
-    import { createStyleElement, unformat, getSeparators, formatConstructor, formatterConstructor } from '../helpers';
+    import { createStyleElement, unformat, formatterConstructor, styleMap } from '../helpers';
 
     export let currency = 'USD';
     export let format = '';
-    export let formatOptions: Record<string, number | string> = {};
+    export let formatOptions: Intl.NumberFormatOptions = {};
     export let formatter: Formatter = null;
     export let inputElement: HTMLInputElement = null;
     export let locale = 'en-us';
+    export let numericValue: number;
     export let placeholder = '';
     export let polling = false;
     export let prefix = '';
@@ -27,7 +28,6 @@
 
     const id = ++inputId;
 
-    let separators: Separators;
     let mask: HTMLSpanElement;
     let poll: number;
     let styles: CSSStyleDeclaration;
@@ -36,15 +36,16 @@
     let oldFormat: string;
     let styleElement: HTMLStyleElement;
     let oldValue: string;
+    let cursorPosBefore: number;
+    let originalLength: number;
 
     if (typeof value === 'number') {
         value = `${value}`;
     }
 
-    $: formats = formatConstructor({ currency, formatOptions, locale });
-    strippedValue = unformat(value);
-    $: separators = getSeparators(locale);
-    $: formatters = formatterConstructor(formats);
+    strippedValue = unformat(value, { currency, locale, type: styleMap[format] });
+    numericValue = Number.isNaN(parseFloat(strippedValue)) ? null : parseFloat(strippedValue);
+    $: formatters = formatterConstructor({ currency, formatOptions, locale });
 
     $: formatterObject = formatters[format] || formatter;
     $: prefix = format ? (formatterObject?.prefix || '') : (prefix || '');
@@ -60,13 +61,16 @@
             elementValue: inputElement?.value,
             newValue,
             rawValue,
-            strippedValue,
-            separators
+            strippedValue
         }
     }
 
     function updateValue(..._: unknown[]) {
         setTimeout(() => {
+            if (!inputElement) {
+                return;
+            }
+
             if (typeof value === 'number') {
                 value = `${value}`;
             }
@@ -77,47 +81,52 @@
                 return;
             }
 
+
             const newRaw = formatterObject?.format(getInputValues(value));
             if ((newRaw && newRaw !== rawValue) || (oldFormat !== format)) {
+                cursorPosBefore = inputElement.selectionStart;
+                originalLength = rawValue.length;
                 rawValue = inputElement.value = value;
-                update();
+                update({ ignoreLength: true });
             }
         });
     }
 
-    function update() {
-        const cursorPosBefore = inputElement.selectionStart;
-        const originalLength = rawValue.length;
+    function update({ ignoreLength = false } = {}) {
+        if (!ignoreLength) {
+            cursorPosBefore = inputElement.selectionStart;
+            originalLength = rawValue.length;
+        }
 
         oldFormat = format;
 
-        strippedValue = unformat(inputElement.value);
+        strippedValue = unformat(inputElement.value, { currency, locale, type: styleMap[format] });
 
         rawValue = formatterObject?.format(getInputValues());
 
         const changeLength = rawValue.length - originalLength;
+        strippedValue = unformat(rawValue, { currency, locale, type: styleMap[format] });
+        const floatValue = parseFloat(strippedValue)
+        numericValue = Number.isNaN(floatValue) ? null : floatValue;
+
+        inputElement.dataset.strippedValue = strippedValue;
 
         value = rawValue
 
-        if (changeLength !== 1) {
-            setTimeout(() => {
-                if (!inputElement) {
-                    return;
-                }
+        const position = cursorPosBefore === originalLength
+            ? rawValue.length
+            : changeLength !== 1
+                ? cursorPosBefore
+                : cursorPosBefore + 1
 
-                inputElement.selectionStart = cursorPosBefore;
-                inputElement.selectionEnd = cursorPosBefore;
-            })
-        } else {
-            setTimeout(() => {
-                if (!inputElement) {
-                    return;
-                }
+        setTimeout(() => {
+            if (!inputElement) {
+                return;
+            }
 
-                inputElement.selectionStart = cursorPosBefore + 1;
-                inputElement.selectionEnd = cursorPosBefore + 1;
-            })
-        }
+            inputElement.selectionStart = position;
+            inputElement.selectionEnd = position;
+        });
     }
 
     function _update(this: HTMLInputElement) {
@@ -272,6 +281,7 @@
     bind:this={inputElement}
     bind:value={rawValue}
     class={_class}
+    data-format={format}
     {disabled}
     on:blur
     on:change

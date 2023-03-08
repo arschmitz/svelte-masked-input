@@ -7,10 +7,11 @@ export interface FormattedInputProps extends svelte.JSX.SvelteInputProps {
     disabled?: boolean;
     disabledClass?: string;
     format?: Formats;
-    formatOptions?: Record<string, number | string>;
+    formatOptions?: Intl.NumberFormatOptions;
     formatter?: Formatter;
     inputElement?: HTMLInputElement;
     locale?: string;
+    numericValue?: number;
     placeholder?: string;
     polling?: boolean;
     prefix?: string;
