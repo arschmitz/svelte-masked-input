@@ -51,7 +51,7 @@
 
     let rawValue = formatterObject?.prefix && !strippedValue ? '' : strippedValue;
 
-    $: updateValue(value, format);
+    $: updateValue(value, format, inputElement);
 
     function getInputValues(newValue?: string) {
         return {
@@ -64,6 +64,10 @@
 
     function updateValue(..._: unknown[]) {
         setTimeout(() => {
+            if (!inputElement) {
+                return;
+            }
+
             if (typeof value === 'number') {
                 value = `${value}`;
             }
