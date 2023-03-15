@@ -273,6 +273,7 @@
     bind:this={inputElement}
     bind:value={rawValue}
     class={_class}
+    data-format={format}
     {disabled}
     on:blur
     on:change
