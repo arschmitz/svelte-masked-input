@@ -152,7 +152,7 @@ export function getFormatParts({ locale = 'en-US', currency = 'USD' }: GetFormat
     const value = {
         currency: getStyleParts(locale, { currency, style: 'currency' }),
         number: getStyleParts(locale, { currency }),
-        percent: getStyleParts(locale, { currency, style: 'percent' }),
+        percent: getStyleParts(locale, { currency, style: 'percent', minimumFractionDigits: 3 }),
     };
 
     formatPartsCache[key] = value;
@@ -369,17 +369,11 @@ export function formatterConstructor({
         },
 
         percent: {
-            format({ strippedValue, ...values }): string {
-                const numberValue = parseFloat(strippedValue);
-                if (Number.isNaN(numberValue)) {
-                    return '';
-                }
-
+            format(values): string {
                 const value = formatDecimals({
                     ...values,
                     formatParts: formatParts.percent,
-                    formatter: formatObject.number,
-                    strippedValue,
+                    formatter: formatObject.percent,
                     type: 'percent',
                 });
                 return getLabel('percent', value);
@@ -432,6 +426,6 @@ export function unformat(
     FormatPartsOptions = {}
 ): string {
     const { decimal } = getFormatParts({ currency, locale })[type];
-    const replacment = new RegExp(`[^\\d${decimal}-]`, 'g');
-    return typeof string === 'string' ? string.replace(replacment, '') : (string || '').toString();
+    const replacement = new RegExp(`[^\\d\\${decimal}-]`, 'g');
+    return typeof string === 'string' ? string.replace(replacement, '') : (string || '').toString();
 }
