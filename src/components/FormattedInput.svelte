@@ -6,7 +6,7 @@
     import type { Formatter, Formatters } from '../helpers';
     import { afterUpdate, onDestroy, onMount } from "svelte";
     import { EVENTS } from '../constants';
-    import { createStyleElement, unformat, formatConstructor, formatterConstructor } from '../helpers';
+    import { createStyleElement, unformat, formatConstructor, formatterConstructor, styleMap } from '../helpers';
 
     export let currency = 'USD';
     export let format = '';
@@ -41,8 +41,8 @@
     }
 
     $: formats = formatConstructor({ currency, formatOptions, locale });
-    strippedValue = unformat(value);
-    $: formatters = formatterConstructor(formats);
+    strippedValue = unformat(value, { currency, locale, type: styleMap[format] });
+    $: formatters = formatterConstructor({ currency, formatObject: formats, locale });
 
     $: formatterObject = formatters[format] || formatter;
     $: prefix = format ? (formatterObject?.prefix || '') : (prefix || '');
@@ -51,7 +51,7 @@
 
     let rawValue = formatterObject?.prefix && !strippedValue ? '' : strippedValue;
 
-    $: updateValue(value, format, inputElement);
+    $: updateValue(value, format);
 
     function getInputValues(newValue?: string) {
         return {
@@ -92,7 +92,7 @@
 
         oldFormat = format;
 
-        strippedValue = unformat(inputElement.value);
+        strippedValue = unformat(inputElement.value, { currency, locale, type: styleMap[format] });
 
         rawValue = formatterObject?.format(getInputValues());
 
