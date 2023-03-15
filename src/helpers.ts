@@ -23,7 +23,6 @@ export type BaseFormatObject = Record<Format, FormatFunction>;
 export interface GetFormatPartsOptions {
     currency: string;
     locale: string;
-    type: DecimalFormat;
 }
 
 export interface FormatInput {
