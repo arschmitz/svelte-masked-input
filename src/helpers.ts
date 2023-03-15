@@ -1,4 +1,4 @@
-import type { Format } from './constants';
+import type { DecimalFormat, Format } from './constants';
 import { BACKGROUND_STYLES, STYLES } from './constants';
 
 export interface FormatParts {
@@ -413,7 +413,7 @@ export function getFloat(string: string, options: FormatPartsOptions = {}): numb
     return parseFloat(unformat(string, options));
 }
 
-export const styleMap = {
+export const styleMap: Record<Format, DecimalFormat> = {
     currency: 'currency',
     currencyInt: 'currency',
     int: 'number',
