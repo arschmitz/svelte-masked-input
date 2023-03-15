@@ -263,9 +263,10 @@ export function formatConstructor(
 
             return new Intl.NumberFormat(locale, options).format(input as number);
         },
-        percent({ input }): string {
+        percent({ input, significantDigits }): string {
             const options = {
                 maximumFractionDigits: 3,
+                minimumSignificantDigits: significantDigits as number,
                 style: 'percent',
                 ...formatOptions,
             };
