@@ -298,7 +298,7 @@ export function formatterConstructor({
 
     function getLabel(type: FormatStyles, value: string): string {
         if (!value) {
-            return ' ';
+            return '';
         }
 
         if (formatParts[type].position === 'end') {
