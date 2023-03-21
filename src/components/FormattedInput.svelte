@@ -277,6 +277,7 @@
     bind:value={rawValue}
     class={_class}
     data-format={format}
+    data-numeric-value={strippedValue}
     {disabled}
     on:blur
     on:change
