@@ -14,6 +14,7 @@
     export let formatter: Formatter = null;
     export let inputElement: HTMLInputElement = null;
     export let locale = 'en-us';
+    export let numericValue: number;
     export let placeholder = '';
     export let polling = false;
     export let prefix = '';
@@ -42,6 +43,7 @@
 
     $: formats = formatConstructor({ currency, formatOptions, locale });
     strippedValue = unformat(value, { currency, locale, type: styleMap[format] });
+    numericValue = parseFloat(strippedValue);
     $: formatters = formatterConstructor({ currency, formatObject: formats, locale });
 
     $: formatterObject = formatters[format] || formatter;
@@ -93,6 +95,7 @@
         oldFormat = format;
 
         strippedValue = unformat(inputElement.value, { currency, locale, type: styleMap[format] });
+        numericValue = parseFloat(strippedValue);
 
         rawValue = formatterObject?.format(getInputValues());
 

@@ -427,6 +427,6 @@ export function unformat(
     FormatPartsOptions = {}
 ): string {
     const { decimal } = getFormatParts({ currency, locale })[type];
-    const replacement = new RegExp(`[^\\d\\${decimal}-]`, 'g');
-    return typeof string === 'string' ? string.replace(replacement, '') : (string || '').toString();
+    const strip = new RegExp(`[^\\d\\${decimal}-]`, 'g');
+    return typeof string === 'string' ? string.replace(strip, '').replace(decimal, '.') : (string || '').toString();
 }
