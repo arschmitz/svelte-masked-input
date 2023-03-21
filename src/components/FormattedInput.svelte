@@ -95,13 +95,14 @@
         oldFormat = format;
 
         strippedValue = unformat(inputElement.value, { currency, locale, type: styleMap[format] });
-        numericValue = parseFloat(strippedValue);
 
         rawValue = formatterObject?.format(getInputValues());
 
         const changeLength = rawValue.length - originalLength;
 
         value = rawValue
+        strippedValue = unformat(rawValue, { currency, locale, type: styleMap[format] });
+        numericValue = parseFloat(strippedValue);
 
         if (changeLength !== 1) {
             setTimeout(() => {
