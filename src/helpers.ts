@@ -67,12 +67,12 @@ interface FormatPartsOptions {
     type?: FormatStyles;
 }
 
-function getFractionDigits(number, separator) {
-    return String(number).split(separator)[1]?.length;
+function getFractionDigits(number) {
+    return String(number).split('.')[1]?.length;
 }
 
-function truncateFractionDigits(number, digits, separator) {
-    const [int, decimal] = `${number}`.split(separator);
+function truncateFractionDigits(number, digits) {
+    const [int, decimal] = `${number}`.split('.');
 
     return parseFloat(`${int}.${decimal.substring(0, digits)}`);
 }
@@ -152,7 +152,7 @@ export function getFormatParts({ locale = 'en-US', currency = 'USD' }: GetFormat
     const value = {
         currency: getStyleParts(locale, { currency, style: 'currency' }),
         number: getStyleParts(locale, { currency }),
-        percent: getStyleParts(locale, { currency, style: 'percent', minimumFractionDigits: 3 }),
+        percent: getStyleParts(locale, { currency, minimumFractionDigits: 3, style: 'percent' }),
     };
 
     formatPartsCache[key] = value;
@@ -204,12 +204,11 @@ export function formatConstructor(
 ): FormatsObject {
     const formatParts = getFormatParts({ currency, locale });
 
-    function trimInput({ input, type, options }): number {
+    function trimInput({ input, options }): number {
         const { maximumFractionDigits } = options;
-        const { decimal } = formatParts[type];
 
-        if (getFractionDigits(input, decimal) >= maximumFractionDigits) {
-            input = truncateFractionDigits(input, maximumFractionDigits, decimal);
+        if (getFractionDigits(input) >= maximumFractionDigits) {
+            input = truncateFractionDigits(input, maximumFractionDigits);
         }
 
         return input;
@@ -225,7 +224,7 @@ export function formatConstructor(
                 ...formatOptions,
             };
 
-            input = trimInput({ input, options, type: 'currency' });
+            input = trimInput({ input, options });
 
             return new Intl.NumberFormat(locale, options).format(input as number);
         },
@@ -259,7 +258,7 @@ export function formatConstructor(
                 ...formatOptions,
             };
 
-            input = trimInput({ input, options, type: 'number' });
+            input = trimInput({ input, options });
 
             return new Intl.NumberFormat(locale, options).format(input as number);
         },
@@ -271,7 +270,7 @@ export function formatConstructor(
                 ...formatOptions,
             };
 
-            input = trimInput({ input, options, type: 'percent' });
+            input = trimInput({ input, options });
 
             return new Intl.NumberFormat(locale, options).format((input as number) / 100);
         },

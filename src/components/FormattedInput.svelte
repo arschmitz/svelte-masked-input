@@ -80,6 +80,7 @@
                 return;
             }
 
+
             const newRaw = formatterObject?.format(getInputValues(value));
             if ((newRaw && newRaw !== rawValue) || (oldFormat !== format)) {
                 rawValue = inputElement.value = value;
@@ -99,10 +100,10 @@
         rawValue = formatterObject?.format(getInputValues());
 
         const changeLength = rawValue.length - originalLength;
-
-        value = rawValue
         strippedValue = unformat(rawValue, { currency, locale, type: styleMap[format] });
         numericValue = parseFloat(strippedValue);
+
+        value = rawValue
 
         if (changeLength !== 1) {
             setTimeout(() => {
