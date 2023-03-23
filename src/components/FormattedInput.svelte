@@ -36,6 +36,8 @@
     let oldFormat: string;
     let styleElement: HTMLStyleElement;
     let oldValue: string;
+    let cursorPosBefore: number;
+    let originalLength: number;
 
     if (typeof value === 'number') {
         value = `${value}`;
@@ -83,15 +85,19 @@
 
             const newRaw = formatterObject?.format(getInputValues(value));
             if ((newRaw && newRaw !== rawValue) || (oldFormat !== format)) {
+                cursorPosBefore = inputElement.selectionStart;
+                originalLength = rawValue.length;
                 rawValue = inputElement.value = value;
-                update();
+                update({ ignoreLength: true });
             }
         });
     }
 
-    function update() {
-        const cursorPosBefore = inputElement.selectionStart;
-        const originalLength = rawValue.length;
+    function update({ ignoreLength = false } = {}) {
+        if (!ignoreLength) {
+            cursorPosBefore = inputElement.selectionStart;
+            originalLength = rawValue.length;
+        }
 
         oldFormat = format;
 
