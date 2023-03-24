@@ -108,6 +108,7 @@
         const changeLength = rawValue.length - originalLength;
         strippedValue = unformat(rawValue, { currency, locale, type: styleMap[format] });
         numericValue = parseFloat(strippedValue);
+        inputElement.dataset.numericValue = strippedValue;
 
         value = rawValue
 
