@@ -16,7 +16,7 @@ export type FormatStyles = 'currency' | 'percent' | 'number';
 
 export type StyleFormatParts = Record<FormatStyles, FormatParts>;
 
-export type FormatFunction = (input: Record<string, string | number>) => string;
+export type FormatFunction = (input: Record<string, number>) => string;
 
 export type BaseFormatObject = Record<Format, FormatFunction>;
 
@@ -204,29 +204,43 @@ export function formatConstructor(
 ): FormatsObject {
     const formatParts = getFormatParts({ currency, locale });
 
-    function trimInput({ input, options }): number {
+    function trimInput({
+        callback,
+        input,
+        options,
+    }: {
+        callback?: (number) => number;
+        input: number;
+        options: Intl.NumberFormatOptions;
+    }): string {
         const { maximumFractionDigits } = options;
+        const fractionDigits = getFractionDigits(input);
 
-        if (getFractionDigits(input) >= maximumFractionDigits) {
+        if (fractionDigits >= maximumFractionDigits) {
             input = truncateFractionDigits(input, maximumFractionDigits);
         }
 
-        return input;
+        if (maximumFractionDigits > fractionDigits && /0$/.test(input.toString())) {
+            options.minimumFractionDigits = fractionDigits;
+        }
+
+        const formatter = new Intl.NumberFormat(locale, options);
+
+        return formatter.format(callback ? callback(input) : input);
     }
 
     return {
         currency({ input }): string {
-            const options = {
-                currency,
-                maximumFractionDigits: 2,
-                minimumFractionDigits: 0,
-                style: 'currency',
-                ...formatOptions,
-            };
-
-            input = trimInput({ input, options });
-
-            return new Intl.NumberFormat(locale, options).format(input as number);
+            return trimInput({
+                input,
+                options: {
+                    currency,
+                    maximumFractionDigits: 2,
+                    minimumFractionDigits: 0,
+                    style: 'currency',
+                    ...formatOptions,
+                },
+            });
         },
         currencyInt({ input }): string {
             const formatFunction = new Intl.NumberFormat(locale, {
@@ -251,28 +265,27 @@ export function formatConstructor(
             return formatFunction.format(input as number);
         },
         number({ input, significantDigits }): string {
-            const options = {
-                maximumFractionDigits: 3,
-                minimumSignificantDigits: significantDigits as number,
-                style: 'decimal',
-                ...formatOptions,
-            };
-
-            input = trimInput({ input, options });
-
-            return new Intl.NumberFormat(locale, options).format(input as number);
+            return trimInput({
+                input,
+                options: {
+                    maximumFractionDigits: 3,
+                    minimumSignificantDigits: significantDigits as number,
+                    style: 'decimal',
+                    ...formatOptions,
+                },
+            });
         },
         percent({ input, significantDigits }): string {
-            const options = {
-                maximumFractionDigits: 3,
-                minimumSignificantDigits: significantDigits as number,
-                style: 'percent',
-                ...formatOptions,
-            };
-
-            input = trimInput({ input, options });
-
-            return new Intl.NumberFormat(locale, options).format((input as number) / 100);
+            return trimInput({
+                callback: (_input) => _input / 100,
+                input,
+                options: {
+                    maximumFractionDigits: 3,
+                    minimumSignificantDigits: significantDigits as number,
+                    style: 'percent',
+                    ...formatOptions,
+                },
+            });
         },
         percentInt({ input }): string {
             const formatFunction = new Intl.NumberFormat(locale, {

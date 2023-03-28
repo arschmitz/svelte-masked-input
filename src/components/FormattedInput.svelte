@@ -108,7 +108,7 @@
         const changeLength = rawValue.length - originalLength;
         strippedValue = unformat(rawValue, { currency, locale, type: styleMap[format] });
         numericValue = parseFloat(strippedValue);
-        inputElement.dataset.numericValue = strippedValue;
+        inputElement.dataset.strippedValue = strippedValue;
 
         value = rawValue
 
@@ -286,7 +286,6 @@
     bind:value={rawValue}
     class={_class}
     data-format={format}
-    data-numeric-value={strippedValue}
     {disabled}
     on:blur
     on:change
