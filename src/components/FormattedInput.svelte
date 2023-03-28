@@ -112,27 +112,20 @@
 
         value = rawValue
 
-        console.log({ cursorPosBefore, originalLength })
+        const position = cursorPosBefore === originalLength
+            ? rawValue.length
+            : changeLength !== 1
+                ? cursorPosBefore
+                : cursorPosBefore + 1
 
-        if (changeLength !== 1) {
-            setTimeout(() => {
-                if (!inputElement) {
-                    return;
-                }
+        setTimeout(() => {
+            if (!inputElement) {
+                return;
+            }
 
-                inputElement.selectionStart = cursorPosBefore;
-                inputElement.selectionEnd = cursorPosBefore;
-            })
-        } else {
-            setTimeout(() => {
-                if (!inputElement) {
-                    return;
-                }
-
-                inputElement.selectionStart = cursorPosBefore + 1;
-                inputElement.selectionEnd = cursorPosBefore + 1;
-            })
-        }
+            inputElement.selectionStart = position;
+            inputElement.selectionEnd = position;
+        });
     }
 
     function _update(this: HTMLInputElement) {
