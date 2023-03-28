@@ -112,6 +112,8 @@
 
         value = rawValue
 
+        console.log({ cursorPosBefore, originalLength })
+
         if (changeLength !== 1) {
             setTimeout(() => {
                 if (!inputElement) {
