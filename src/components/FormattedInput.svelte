@@ -3,10 +3,10 @@
 </script>
 
 <script lang="ts">
-    import type { Formatter, Formatters } from '../helpers';
+    import type { Formatter, Formatters } from '../types';
     import { afterUpdate, onDestroy, onMount } from "svelte";
     import { EVENTS } from '../constants';
-    import { createStyleElement, unformat, formatConstructor, formatterConstructor, styleMap } from '../helpers';
+    import { createStyleElement, unformat, formatterConstructor, styleMap } from '../helpers';
 
     export let currency = 'USD';
     export let format = '';
@@ -43,10 +43,9 @@
         value = `${value}`;
     }
 
-    $: formats = formatConstructor({ currency, formatOptions, locale });
     strippedValue = unformat(value, { currency, locale, type: styleMap[format] });
     numericValue = Number.isNaN(parseFloat(strippedValue)) ? null : parseFloat(strippedValue);
-    $: formatters = formatterConstructor({ currency, formatObject: formats, locale });
+    $: formatters = formatterConstructor({ currency, formatOptions, locale });
 
     $: formatterObject = formatters[format] || formatter;
     $: prefix = format ? (formatterObject?.prefix || '') : (prefix || '');
