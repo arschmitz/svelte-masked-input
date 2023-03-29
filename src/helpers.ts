@@ -10,7 +10,7 @@ import type {
     Options,
     StyleFormatParts,
     TrimInputInput
-} from 'types';
+} from './types';
 import type { DecimalFormat, Format } from './constants';
 import { BACKGROUND_STYLES, STYLES } from './constants';
 
