@@ -45,7 +45,7 @@
 
     $: formats = formatConstructor({ currency, formatOptions, locale });
     strippedValue = unformat(value, { currency, locale, type: styleMap[format] });
-    numericValue = parseFloat(strippedValue);
+    numericValue = Number.isNaN(parseFloat(strippedValue)) ? null : parseFloat(strippedValue);
     $: formatters = formatterConstructor({ currency, formatObject: formats, locale });
 
     $: formatterObject = formatters[format] || formatter;
@@ -107,7 +107,9 @@
 
         const changeLength = rawValue.length - originalLength;
         strippedValue = unformat(rawValue, { currency, locale, type: styleMap[format] });
-        numericValue = parseFloat(strippedValue);
+        const floatValue = parseFloat(strippedValue)
+        numericValue = Number.isNaN(floatValue) ? null : floatValue;
+
         inputElement.dataset.strippedValue = strippedValue;
 
         value = rawValue
