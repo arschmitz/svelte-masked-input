@@ -193,7 +193,7 @@ export function formatConstructor(
         ) {
             value = [
                 intPart,
-                strippedDecimalPart.substring(0, maximumFractionDigits),
+                strippedDecimalPart?.substring(0, maximumFractionDigits),
             ].join(decimal);
         }
 
