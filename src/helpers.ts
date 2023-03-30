@@ -188,12 +188,12 @@ export function formatConstructor(
 
         if (
             hasDecimal
-            && !isDecimal && /0$/.test(value)
+            && !isDecimal
             && decimalPart !== strippedDecimalPart
         ) {
             value = [
                 intPart,
-                strippedDecimalPart.substring(strippedDecimalPart.length - maximumFractionDigits),
+                strippedDecimalPart.substring(0, maximumFractionDigits),
             ].join(decimal);
         }
 
