@@ -3,23 +3,20 @@
 </script>
 
 <script lang="ts">
-    import type { Formatter, Formatters } from '../types';
     import { afterUpdate, onDestroy, onMount } from "svelte";
-    import { EVENTS } from '../constants';
-    import { createStyleElement, unformat, formatterConstructor, styleMap } from '../helpers';
+    import { Format } from '../constants';
+    import { FormattedInput } from './formattedInput';
 
     export let currency = 'USD';
-    export let format = '';
+    export let format: Format;
     export let formatOptions: Intl.NumberFormatOptions = {};
-    export let formatter: Formatter = null;
     export let inputElement: HTMLInputElement = null;
     export let locale = 'en-us';
     export let numericValue: number;
     export let placeholder = '';
     export let polling = false;
-    export let prefix = '';
     export let value: string| number = '';
-    export let strippedValue = '';
+    export let unformattedValue = '';
     export let disabledClass = 'disabled';
     export let disabled = false;
 
@@ -29,208 +26,48 @@
     const id = ++inputId;
 
     let mask: HTMLSpanElement;
-    let poll: number;
-    let styles: CSSStyleDeclaration;
-    let formatters: Formatters;
-    let formatterObject: Formatter;
-    let oldFormat: string;
-    let styleElement: HTMLStyleElement;
-    let oldValue: string;
-    let cursorPosBefore: number;
-    let originalLength: number;
+    let formattedInput: FormattedInput;
 
     if (typeof value === 'number') {
         value = `${value}`;
     }
 
-    strippedValue = unformat(value, { currency, locale, type: styleMap[format] });
-    numericValue = Number.isNaN(parseFloat(strippedValue)) ? null : parseFloat(strippedValue);
-    $: formatters = formatterConstructor({ currency, formatOptions, locale });
+    $: initalize(currency, format, formatOptions, locale);
+    $: updateValue(value);
 
-    $: formatterObject = formatters[format] || formatter;
-    $: prefix = format ? (formatterObject?.prefix || '') : (prefix || '');
-    $: suffix = format ? (formatterObject?.suffix || '') : (suffix || '');
-    $: updateMaskStyle(disabled);
+    function initalize(..._: unknown[]) {
+        formattedInput = new FormattedInput({
+            callback: update,
+            currency,
+            disabled,
+            disabledClass,
+            formatOptions,
+            id,
+            locale,
+            polling,
+            type: format,
+        });
+    }
 
-    let rawValue = formatterObject?.prefix && !strippedValue ? '' : strippedValue;
-
-    $: updateValue(value, format);
-
-    function getInputValues(newValue?: string) {
-        return {
-            elementValue: inputElement?.value,
-            newValue,
-            rawValue,
-            strippedValue
-        }
+    function update({ numericValue: _numericValue, unformattedValue: _unformattedValue, value: _value }) {
+        numericValue = _numericValue;
+        unformattedValue = _unformattedValue;
+        value = _value;
     }
 
     function updateValue(..._: unknown[]) {
-        setTimeout(() => {
-            if (!inputElement) {
-                return;
-            }
-
-            if (typeof value === 'number') {
-                value = `${value}`;
-            }
-
-            if (value === undefined) {
-                inputElement.value = '';
-                update();
-                return;
-            }
-
-
-            const newRaw = formatterObject?.format(getInputValues(value));
-            if ((newRaw && newRaw !== rawValue) || (oldFormat !== format)) {
-                cursorPosBefore = inputElement.selectionStart;
-                originalLength = rawValue.length;
-                rawValue = inputElement.value = value;
-                update({ ignoreLength: true });
-            }
-        });
+        formattedInput.updateValue(value);
     }
 
-    function update({ ignoreLength = false } = {}) {
-        if (!ignoreLength) {
-            cursorPosBefore = inputElement.selectionStart;
-            originalLength = rawValue.length;
-        }
-
-        oldFormat = format;
-
-        strippedValue = unformat(inputElement.value, { currency, locale, type: styleMap[format] });
-
-        rawValue = formatterObject?.format(getInputValues());
-
-        const changeLength = rawValue.length - originalLength;
-        strippedValue = unformat(rawValue, { currency, locale, type: styleMap[format] });
-        const floatValue = parseFloat(strippedValue)
-        numericValue = Number.isNaN(floatValue) ? null : floatValue;
-
-        inputElement.dataset.strippedValue = strippedValue;
-
-        value = rawValue
-
-        const position = cursorPosBefore === originalLength
-            ? rawValue.length
-            : changeLength !== 1
-                ? cursorPosBefore
-                : cursorPosBefore + 1
-
-        setTimeout(() => {
-            if (!inputElement) {
-                return;
-            }
-
-            inputElement.selectionStart = position;
-            inputElement.selectionEnd = position;
-        });
-    }
-
-    function _update(this: HTMLInputElement) {
-        return update();
-    }
-
-    function updateMaskStyle(..._: unknown[]) {
-        if (inputElement) {
-            inputElement.classList.remove('copied');
-        }
-        setTimeout(() => {
-            if (!mask?.isConnected || !inputElement) {
-                return;
-            }
-
-            const changes = {};
-
-            if (inputElement.classList.contains('copied')) {
-                return;
-            }
-
-            const newStyleElement = createStyleElement({ id, styles });
-
-            if (styleElement) {
-                styleElement.replaceWith(newStyleElement);
-            } else {
-                mask.append(newStyleElement);
-            }
-
-            styleElement = newStyleElement;
-
-            ['top', 'left', 'width', 'height'].forEach((dimension) => {
-                const prop = `offset${dimension.charAt(0).toUpperCase() + dimension.slice(1)}`;
-                if (inputElement && mask.style[dimension] !== `${inputElement[prop]}px`) {
-                    changes[dimension] = `${inputElement[prop]}px`;
-                }
-            });
-
-            mask.classList[disabled ? 'add' : 'remove'](disabledClass);
-            inputElement.classList.add('copied');
-
-            if (!Object.keys(changes).length) {
-                return;
-            }
-
-            Object.assign(mask.style, changes);
-        }, 1);
-    }
-
-    function handleSafariBlur() {
-        if (!inputElement || inputElement.value === oldValue) {
-            return;
-        }
-
-        inputElement.dispatchEvent(new Event('change', { bubbles: true }));
-    }
-
-    function handleSafariFocus() {
-        oldValue = inputElement.value;
-    }
-
-    onMount(() => {
-        styles = getComputedStyle(inputElement);
-
-        if (polling) {
-            poll = window.setInterval(updateMaskStyle, 200);
-        }
-
-        EVENTS.forEach((event) => {
-            inputElement.addEventListener(event, updateMaskStyle);
-        });
-
-        inputElement.addEventListener('input', _update);
-
-        // Would prefer to use feature detection but this does not seem possible
-        if (/^((?!chrome|android).)*safari/i.test(navigator.userAgent)) {
-            inputElement.addEventListener('focus', handleSafariFocus)
-            inputElement.addEventListener('blur', handleSafariBlur);
-        }
-
-        document.fonts.ready.then(updateMaskStyle);
-
-        update();
-    });
+    onMount(() => formattedInput.mount({ element: inputElement, mask }));
 
     afterUpdate(() => {
         if (!polling) {
-            updateMaskStyle();
+            formattedInput.updateMaskStyle();
         }
     });
 
-    onDestroy(() => {
-        if (poll) {
-            clearInterval(poll);
-        }
-
-        EVENTS.forEach((event) => {
-            inputElement?.removeEventListener(event, updateMaskStyle);
-        });
-
-        inputElement?.removeEventListener('blur', handleSafariBlur);
-        inputElement?.removeEventListener('focus', handleSafariFocus);
-        inputElement?.removeEventListener('input', _update);
-    });
+    onDestroy(() => formattedInput.destroy());
 </script>
 
 <style lang="scss">
@@ -273,13 +110,12 @@
     class="formatted-input-mask"
     bind:this={mask}
 >
-    {#if rawValue}
-        <i>{rawValue}</i><span class="suffix">{suffix}</span>
+    {#if value}
+        <i></i><span class="suffix"></span>
     {/if}
 </span>
 <input
     bind:this={inputElement}
-    bind:value={rawValue}
     class={_class}
     data-format={format}
     {disabled}

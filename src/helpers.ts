@@ -1,28 +1,18 @@
 import type {
-    FormatDecimalsInput,
-    FormatFunction,
     FormatParts,
-    FormatPartsOptions,
-    FormatStyles,
-    Formatters,
     GetFormatPartsOptions,
-    Options,
-    StyleFormatParts,
-    TrimInputInput
+    StyleFormatParts
 } from './types';
 import {
     BACKGROUND_STYLES,
-    DecimalFormat,
-    FORMATS,
-    Format,
     STYLES
 } from './constants';
 
-function getFractionDigits(number) {
+export function getFractionDigits(number: number): number {
     return String(number).split('.')[1]?.length;
 }
 
-function truncateFractionDigits(number, digits) {
+export function truncateFractionDigits(number: number, digits: number): number {
     const [int, decimal] = `${number}`.split('.');
 
     return parseFloat(`${int}.${decimal.substring(0, digits)}`);
@@ -40,50 +30,6 @@ export function createStyleElement({ id, styles }: { id: number; styles: CSSStyl
     style.appendChild(document.createTextNode(styleClass));
 
     return style;
-}
-
-const log10 = Math.log(10);
-
-export function formatDecimals(
-    {
-        formatParts: { decimal, suffix },
-        formatter,
-        strippedValue,
-        elementValue,
-        rawValue,
-        newValue,
-    }: FormatDecimalsInput
-): string {
-    const decimalEndRegExp = new RegExp(`\\${decimal}$`);
-    const decimalRegExp = new RegExp(`\\${decimal}`);
-    const isDecimal = decimalEndRegExp.test(newValue || elementValue);
-    const hasDecimal = decimalRegExp.test(newValue || elementValue);
-    const usedValue = isDecimal ? (newValue || strippedValue).slice(0, -1) : (newValue || strippedValue);
-    const intValue = parseFloat(usedValue.replace(decimal, '.'));
-    const digits = intValue > 0
-        ? getSignificantDigitCount(strippedValue, decimal) + 1
-        : Math.min(4, hasDecimal ? strippedValue.length - 1 : strippedValue.length);
-
-    if (Number.isNaN(intValue)) {
-        return '';
-    }
-
-    const significantDigits = !/0$/.test(rawValue) ? undefined : digits;
-    return formatter({ decimal, hasDecimal, input: intValue, isDecimal, significantDigits, strippedValue, suffix });
-}
-
-export function getSignificantDigitCount(n: string | number, decimal: string): number {
-    n = Math.abs(parseFloat(String(n).replace(decimal, '')));
-
-    if (n === 0) {
-        return 0;
-    }
-
-    while (n !== 0 && n % 10 === 0) {
-        n /= 10;
-    }
-
-    return Math.floor(Math.log(n) / log10) + 1;
 }
 
 const formatPartsCache = {};
@@ -142,179 +88,4 @@ function getStyleParts(locale: string, options): FormatParts {
 
         return collection;
     }, combined as Partial<FormatParts>) as FormatParts;
-}
-
-export function formatConstructor(
-    { currency, formatOptions, locale }: Options
-): (type: Format) => FormatFunction {
-    const defaultOptions = {
-        currency: {
-            currency,
-            maximumFractionDigits: 2,
-            minimumFractionDigits: 0,
-            style: 'currency',
-            ...formatOptions,
-        },
-        number: {
-            maximumFractionDigits: 3,
-            style: 'decimal',
-            ...formatOptions,
-        },
-        percent: {
-            maximumFractionDigits: 3,
-            style: 'percent',
-            ...formatOptions,
-        },
-    };
-
-    function trimInput({ callback, options, values } : TrimInputInput): string {
-        const { maximumFractionDigits } = options;
-        const { isDecimal, hasDecimal, decimal, suffix, strippedValue } = values;
-        let { input } = values;
-        const fractionDigits = getFractionDigits(input);
-
-        if (fractionDigits >= maximumFractionDigits) {
-            input = truncateFractionDigits(input, maximumFractionDigits);
-        }
-
-        let value = new Intl.NumberFormat(locale, options).format(callback ? callback(input) : input);
-
-        if (suffix) {
-            value = value.replace(new RegExp(`${suffix}$`), '');
-        }
-
-        const [intPart, decimalPart] = value.split(decimal);
-        const [, strippedDecimalPart] = strippedValue.split('.');
-
-        if (
-            hasDecimal
-            && !isDecimal
-            && decimalPart !== strippedDecimalPart
-        ) {
-            value = [
-                intPart,
-                strippedDecimalPart?.substring(0, maximumFractionDigits),
-            ].join(decimal);
-        }
-
-        return `${value}${isDecimal ? decimal : ''}`;
-    }
-
-    function handleDecimals(type: DecimalFormat, callback?: (input: number) => number): FormatFunction {
-        return (values) => {
-            return trimInput({ callback, options: defaultOptions[type], values });
-        };
-    }
-
-    function handleInt(type: DecimalFormat, callback?: (input: number) => number) {
-        return ({ input }) => {
-            return new Intl.NumberFormat(locale, {
-                ...defaultOptions[type],
-                maximumFractionDigits: 0,
-                minimumFractionDigits: 0,
-            }).format(callback ? callback(input) : input);
-        };
-    }
-
-    return (type: Format) => {
-        const baseType = type === 'int' ? 'number' : type.replace(/int/i, '') as DecimalFormat;
-        const callback = /percent/.test(type) ? (input) => input / 100 : null;
-
-        return /int/i.test(type) ? handleInt(baseType, callback) : handleDecimals(baseType, callback);
-    };
-}
-
-export function formatterConstructor({
-    currency,
-    formatOptions,
-    locale,
-}: {
-    currency: string;
-    formatOptions: Intl.NumberFormatOptions;
-    locale: string;
-}): Formatters {
-    const formatParts = getFormatParts({ currency, locale });
-    const formatObject = formatConstructor({ currency, formatOptions, locale });
-
-    function getLabel(type: FormatStyles, value: string): string {
-        if (!value) {
-            return '';
-        }
-
-        if (formatParts[type].position === 'end') {
-            const replacement = new RegExp(`${formatParts[type].suffix}$`);
-            value = value.replace(replacement, '');
-        }
-
-        return value;
-    }
-
-    function format(type: DecimalFormat) {
-        return (values) => {
-            const value = formatDecimals({
-                ...values,
-                formatParts: formatParts[type],
-                formatter: formatObject(type),
-                type,
-            });
-
-            return getLabel(type, value);
-        };
-    }
-
-    function formatInt(type: DecimalFormat) {
-        return ({ rawValue, newValue }) => {
-            const intValue = getInt(newValue || rawValue, { currency, locale });
-
-            if (Number.isNaN(intValue)) {
-                return '';
-            }
-
-            const value = formatObject(type === 'number' ? 'int' : `${type}Int`)({ input: intValue });
-
-            return getLabel(type, value);
-        };
-    }
-
-    return FORMATS.reduce((collection, type) => {
-        const baseType = type === 'int' ? 'number' : type.replace(/int/i, '') as DecimalFormat;
-        collection[type] = {
-            format: /int/i.test(type) ? formatInt(baseType) : format(baseType),
-            prefix: formatParts[baseType].prefix,
-            suffix: formatParts[baseType].suffix,
-        };
-
-        return collection;
-    }, {}) as Formatters;
-}
-
-export function getInt(string: string, options: FormatPartsOptions = {}): number {
-    return parseInt(unformat(string, options), 10);
-}
-
-export function getFloat(string: string, options: FormatPartsOptions = {}): number {
-    return parseFloat(unformat(string, options));
-}
-
-export const styleMap: Record<Format, DecimalFormat> = {
-    currency: 'currency',
-    currencyInt: 'currency',
-    int: 'number',
-    number: 'number',
-    percent: 'percent',
-    percentInt: 'percent',
-};
-
-export function unformat(
-    string: string | number,
-    {
-        currency = 'USD',
-        locale = 'en-US',
-        type = 'number',
-    } :
-    FormatPartsOptions = {}
-): string {
-    const { decimal } = getFormatParts({ currency, locale })[type];
-    const strip = new RegExp(`[^\\d\\${decimal}-]`, 'g');
-    return typeof string === 'string' ? string.replace(strip, '').replace(decimal, '.') : (string || '').toString();
 }

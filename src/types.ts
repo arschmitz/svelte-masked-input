@@ -81,3 +81,10 @@ export interface TrimInputInput {
     options: Intl.NumberFormatOptions;
     values: FormatFunctionInput;
 }
+
+export interface InteractiveFormatterOptions {
+    currency: string;
+    formatOptions: Intl.NumberFormatOptions;
+    locale: string;
+    type: Format;
+}

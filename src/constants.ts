@@ -97,3 +97,34 @@ export type DecimalFormat = DecimalFormatTuple[number];
 export const FORMATS = [...INTEGER_FORMATS, ...DECIMAL_FORMATS] as const;
 type FormatTuple = typeof FORMATS;
 export type Format = FormatTuple[number];
+
+export const DEFAULT_OPTIONS = {
+    currency: {
+        maximumFractionDigits: 2,
+        minimumFractionDigits: 0,
+        style: 'currency',
+    },
+    currencyInt: {
+        maximumFractionDigits: 0,
+        minimumFractionDigits: 0,
+        style: 'currency',
+    },
+    int: {
+        maximumFractionDigits: 0,
+        minimumFractionDigits: 0,
+        style: 'decimal',
+    },
+    number: {
+        maximumFractionDigits: 3,
+        style: 'decimal',
+    },
+    percent: {
+        maximumFractionDigits: 3,
+        style: 'percent',
+    },
+    percentInt: {
+        maximumFractionDigits: 0,
+        minimumFractionDigits: 0,
+        style: 'percent',
+    },
+};
