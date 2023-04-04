@@ -56,8 +56,9 @@
 
     $: updateValue(value, format);
 
-    function getInputValues(newValue?: string) {
+    function getInputValues(newValue?: string, deleted?: boolean) {
         return {
+            deleted,
             elementValue: inputElement?.value,
             newValue,
             rawValue,
@@ -92,7 +93,7 @@
         });
     }
 
-    function update({ ignoreLength = false } = {}) {
+    function update({ ignoreLength = false, deleted = false } = {}) {
         if (!ignoreLength) {
             cursorPosBefore = inputElement.selectionStart;
             originalLength = rawValue.length;
@@ -102,7 +103,7 @@
 
         strippedValue = unformat(inputElement.value, { currency, locale, type: styleMap[format] });
 
-        rawValue = formatterObject?.format(getInputValues());
+        rawValue = formatterObject?.format(getInputValues(null, deleted));
 
         const changeLength = rawValue.length - originalLength;
         strippedValue = unformat(rawValue, { currency, locale, type: styleMap[format] });
@@ -129,8 +130,8 @@
         });
     }
 
-    function _update(this: HTMLInputElement) {
-        return update();
+    function _update(this: HTMLInputElement, event: InputEvent) {
+        return update({ deleted: event.inputType === 'deleteContentBackward' });
     }
 
     function updateMaskStyle(..._: unknown[]) {
