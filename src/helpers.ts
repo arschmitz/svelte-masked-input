@@ -3,7 +3,6 @@ import type {
     FormatFunction,
     FormatParts,
     FormatPartsOptions,
-    FormatStyles,
     Formatters,
     GetFormatPartsOptions,
     Options,
@@ -236,9 +235,14 @@ export function formatterConstructor({
     const formatParts = getFormatParts({ currency, locale });
     const formatObject = formatConstructor({ currency, formatOptions, locale });
 
-    function getLabel(type: FormatStyles, value: string): string {
-        if (!value) {
+    function getLabel({ isDecimalOnly, type, value, isNegativeOnly }): string {
+        if (!value && !isNegativeOnly && !isDecimalOnly) {
             return '';
+        }
+
+        if (isNegativeOnly || isDecimalOnly) {
+            const { decimal, prefix, suffix } = formatParts[type];
+            return `${isNegativeOnly ? prefix : ''}${isDecimalOnly ? decimal : ''}${suffix}`;
         }
 
         if (formatParts[type].position === 'end') {
@@ -251,6 +255,16 @@ export function formatterConstructor({
 
     function format(type: DecimalFormat) {
         return (values) => {
+            const { rawValue, deleted, elementValue, previousValue } = values;
+            const signRegExp = new RegExp(`^${formatParts[type].minusSign}$`);
+            const signSymbolRegExp = new RegExp(`^${formatParts[type].minusSign}\\${formatParts[type].symbol}$`);
+            const isNegativeOnly = (signRegExp.test(elementValue) && !deleted)
+                || signSymbolRegExp.test(elementValue)
+                || (signRegExp.test(elementValue) && deleted && !signSymbolRegExp.test(previousValue));
+            const decimalRegExp = new RegExp(`^\\${formatParts[type].decimal}$`);
+            const isDecimalOnly = decimalRegExp.test(elementValue);
+            const multiNegative = new RegExp(`${formatParts[type].minusSign}`, 'g');
+            const isMultiNegative = rawValue?.match(multiNegative)?.length > 1;
             const value = formatDecimals({
                 ...values,
                 formatParts: formatParts[type],
@@ -258,21 +272,31 @@ export function formatterConstructor({
                 type,
             });
 
-            return getLabel(type, value);
+            return getLabel({ isDecimalOnly, isNegativeOnly, type, value: isMultiNegative ? previousValue : value });
         };
     }
 
     function formatInt(type: DecimalFormat) {
-        return ({ rawValue, newValue }) => {
+        return ({ deleted, rawValue, newValue, elementValue, previousValue }) => {
             const intValue = getInt(newValue || rawValue, { currency, locale });
+            const signRegExp = new RegExp(`^${formatParts[type].minusSign}$`);
+            const multiNegative = new RegExp(`${formatParts[type].minusSign}`, 'g');
+            const isMultiNegative = rawValue?.match(multiNegative)?.length > 1;
+            const signSymbolRegExp = new RegExp(`^${formatParts[type].minusSign}\\${formatParts[type].symbol}$`);
+            const isNegativeOnly = (signRegExp.test(elementValue) && !deleted)
+                || signSymbolRegExp.test(elementValue)
+                || (signRegExp.test(elementValue) && deleted && !signSymbolRegExp.test(previousValue));
 
-            if (Number.isNaN(intValue)) {
+            const decimalRegExp = new RegExp(`^\\${formatParts[type].decimal}$`);
+            const isDecimalOnly = decimalRegExp.test(elementValue);
+
+            if (Number.isNaN(intValue) && !isNegativeOnly && !isMultiNegative) {
                 return '';
             }
 
             const value = formatObject(type === 'number' ? 'int' : `${type}Int`)({ input: intValue });
 
-            return getLabel(type, value);
+            return getLabel({ isDecimalOnly, isNegativeOnly, type, value: isMultiNegative ? previousValue : value });
         };
     }
 
