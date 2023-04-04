@@ -86,45 +86,14 @@ export const EVENTS = [
     'blur',
 ];
 
-export const INTEGER_FORMATS = ['currencyInt', 'int', 'percentInt'] as const;
+export const INTEGER_FORMATS = ['currencyInt', 'decimalInt', 'percentInt'] as const;
 type IntFormatTuple = typeof INTEGER_FORMATS;
 export type IntFormat = IntFormatTuple[number];
 
-export const DECIMAL_FORMATS = ['currency', 'number', 'percent'] as const;
+export const DECIMAL_FORMATS = ['currency', 'decimal', 'percent'] as const;
 type DecimalFormatTuple = typeof DECIMAL_FORMATS;
 export type DecimalFormat = DecimalFormatTuple[number];
 
 export const FORMATS = [...INTEGER_FORMATS, ...DECIMAL_FORMATS] as const;
 type FormatTuple = typeof FORMATS;
 export type Format = FormatTuple[number];
-
-export const DEFAULT_OPTIONS = {
-    currency: {
-        maximumFractionDigits: 2,
-        minimumFractionDigits: 0,
-        style: 'currency',
-    },
-    currencyInt: {
-        maximumFractionDigits: 0,
-        minimumFractionDigits: 0,
-        style: 'currency',
-    },
-    int: {
-        maximumFractionDigits: 0,
-        minimumFractionDigits: 0,
-        style: 'decimal',
-    },
-    number: {
-        maximumFractionDigits: 3,
-        style: 'decimal',
-    },
-    percent: {
-        maximumFractionDigits: 3,
-        style: 'percent',
-    },
-    percentInt: {
-        maximumFractionDigits: 0,
-        minimumFractionDigits: 0,
-        style: 'percent',
-    },
-};

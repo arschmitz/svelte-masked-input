@@ -42,7 +42,7 @@ export function getFormatParts({ locale = 'en-US', currency = 'USD' }: GetFormat
 
     const value = {
         currency: getStyleParts(locale, { currency, style: 'currency' }),
-        number: getStyleParts(locale, { currency }),
+        decimal: getStyleParts(locale, { currency }),
         percent: getStyleParts(locale, { currency, minimumFractionDigits: 3, style: 'percent' }),
     };
 

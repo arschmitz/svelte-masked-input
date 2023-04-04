@@ -33,6 +33,7 @@
     }
 
     $: initalize(currency, format, formatOptions, locale);
+    $: updateOptions({ disabled, disabledClass });
     $: updateValue(value);
 
     function initalize(..._: unknown[]) {
@@ -47,6 +48,10 @@
             polling,
             type: format,
         });
+    }
+
+    function updateOptions(..._: unknown[]) {
+        formattedInput.updateOptions({ disabled, disabledClass });
     }
 
     function update({ numericValue: _numericValue, unformattedValue: _unformattedValue, value: _value }) {

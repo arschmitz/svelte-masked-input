@@ -1,120 +1,103 @@
-import type {
-    FormatParts,
-    InteractiveFormatterOptions,
-} from '../types';
+import type { FormatParts } from '../types';
 import {
     DecimalFormat,
-    DEFAULT_OPTIONS,
     Format
 } from '../constants';
 import { getFormatParts, getFractionDigits, truncateFractionDigits } from '../helpers';
 
-export default class InterActiveFormatter {
-    baseType: DecimalFormat;
+export interface State {
+    hasDecimal: boolean;
+    isDecimal: boolean;
+    numericValue: number;
+    rawValue: string;
+    unformattedValue: string;
+    value: string;
+}
 
-    cursorPosition: number;
+export default class InterActiveFormatter extends Intl.NumberFormat {
+    #baseType: DecimalFormat;
 
-    decimalEndRegExp: RegExp;
+    #formatOptions: Intl.NumberFormatOptions;
 
-    decimalRegExp: RegExp;
+    #rawValue: string;
 
-    formatOptions: Intl.NumberFormatOptions;
+    #regExp: {
+        decimal: RegExp;
+        decimalEnd: RegExp;
+        suffix: RegExp;
+        unformat: RegExp;
+    };
+
+    #type: Format;
 
     formatParts: FormatParts;
 
-    formatter: Intl.NumberFormat['format'];
+    isIntType: boolean;
 
-    isDecimalType: boolean;
+    constructor(locale: string, formatOptions: Intl.NumberFormatOptions) {
+        const type = (formatOptions.style || 'decimal') as Format;
+        const isIntType = /Int/.test(type);
 
-    rawValue: string;
+        if (isIntType) {
+            formatOptions.style = formatOptions.style.replace(/Int/, '');
+            formatOptions.maximumFractionDigits = 0;
+            formatOptions.minimumFractionDigits = 0;
+        }
 
-    type: Format;
+        super(locale, formatOptions);
 
-    unformatRegExp: RegExp;
+        const { style, currency } = this.#formatOptions;
+        this.#formatOptions = super.resolvedOptions();
+        this.isIntType = isIntType;
+        this.#type = type;
+        this.#baseType = style as DecimalFormat;
+        this.formatParts = getFormatParts({ currency, locale })[style];
+        this.#regExp.decimalEnd = new RegExp(`\\${this.formatParts.decimal}$`);
+        this.#regExp.decimal = new RegExp(`\\${this.formatParts.decimal}`);
+        this.#regExp.unformat = new RegExp(`[^\\d\\${this.formatParts.decimal}-]`, 'g');
+        this.#regExp.suffix = new RegExp(`${this.formatParts.suffix}$`);
+    }
 
-    valueLength: number;
+    get state(): State {
+        if (!this.#rawValue) {
+            return undefined;
+        }
 
-    constructor({ locale, currency, formatOptions, type }: InteractiveFormatterOptions) {
-        super();
-        this.formatOptions = {
-            ...DEFAULT_OPTIONS[this.type],
-            ...formatOptions,
-            currency,
+        const value = this.interactiveFormat();
+        const unformattedValue = this.unformat();
+
+        return {
+            hasDecimal: this.#regExp.decimal.test(value),
+            isDecimal: this.#regExp.decimalEnd.test(value),
+            numericValue: !this.isIntType ? parseFloat(unformattedValue) : parseInt(unformattedValue, 10),
+            rawValue: this.#rawValue,
+            unformattedValue,
+            value,
         };
-        this.type = type;
-        this.isDecimalType = /int/i.test(type);
-        this.formatParts = getFormatParts({ currency, locale })[type];
-        this.decimalEndRegExp = new RegExp(`\\${this.formatParts.decimal}$`);
-        this.decimalRegExp = new RegExp(`\\${this.formatParts.decimal}`);
-        this.unformatRegExp = new RegExp(`[^\\d\\${this.formatParts.decimal}-]`, 'g');
-        this.formatter = new Intl.NumberFormat(locale, this.formatOptions).format;
     }
 
-    get hasDecimal(): boolean {
-        return this.decimalRegExp.test(this.value);
-    }
+    interactiveFormat(input?: string): string {
+        const unformattedValue = input ? this.unformat(input) : this.state.unformattedValue;
+        const numericValue = this.parseNumber(unformattedValue);
 
-    get isDecimal(): boolean {
-        return this.decimalEndRegExp.test(this.value);
-    }
-
-    get numericValue(): number {
-        return this.isDecimalType ? parseFloat(this.unformattedValue) : parseInt(this.unformattedValue, 10);
-    }
-
-    get unformattedValue(): string {
-        return this.unformat();
-    }
-
-    get value(): string {
-        return this.getLabel(this.trimInput()) || '';
-    }
-
-    format(input: string): void {
-        this.rawValue = input;
-        this.rawValue = this.value;
-    }
-
-    getLabel(value: string): string {
-        if (!value) {
-            return '';
+        if (this.isIntType) {
+            return this.format(numericValue);
         }
 
-        if (this.formatParts.position === 'end') {
-            const replacement = new RegExp(`${this.formatParts.suffix}$`);
-            value = value.replace(replacement, '');
-        }
-
-        return value;
-    }
-
-    getNumber(value: string): number {
-        value = this.unformat(value);
-        return this.isDecimalType ? parseFloat(value) : parseInt(value, 10);
-    }
-
-    trimInput(input?: string): string {
-        const unformattedValue = input ? this.unformat(input) : this.unformattedValue;
-        const numericValue = this.getNumber(unformattedValue);
-
-        if (!this.isDecimalType) {
-            return this.formatter(numericValue);
-        }
-
-        const { maximumFractionDigits } = this.formatOptions;
+        const { maximumFractionDigits } = this.#formatOptions;
         const fractionDigits = getFractionDigits(numericValue);
         const { decimal, suffix } = this.formatParts;
-        const { isDecimal, hasDecimal } = this;
+        const { isDecimal, hasDecimal } = this.state;
         let value: number;
 
         if (fractionDigits >= maximumFractionDigits) {
             value = truncateFractionDigits(numericValue, maximumFractionDigits);
         }
 
-        let string = this.formatter(value / (this.type === 'percent' ? 100 : 1));
+        let string = this.format(value / (this.#baseType === 'percent' ? 100 : 1));
 
         if (suffix) {
-            string = string.replace(new RegExp(`${suffix}$`), '');
+            string = string.replace(this.#regExp.suffix, '');
         }
 
         const [intPart, decimalPart] = string.split(decimal);
@@ -131,10 +114,32 @@ export default class InterActiveFormatter {
             ].join(decimal);
         }
 
-        return `${string}${isDecimal ? decimal : ''}`;
+        string = `${string}${isDecimal ? decimal : ''}`;
+
+        if (this.formatParts.position === 'end') {
+            string = string.replace(this.#regExp.suffix, '');
+        }
+
+        return string;
     }
 
-    unformat(value: string = this.value): string {
-        return value.replace(this.unformatRegExp, '').replace(this.formatParts.decimal, '.');
+    parseNumber(value: string): number {
+        value = this.unformat(value);
+        return !this.isIntType ? parseFloat(value) : parseInt(value, 10);
+    }
+
+    resolvedOptions(): Intl.ResolvedNumberFormatOptions {
+        const options = super.resolvedOptions();
+        options.style = this.#type;
+        return options;
+    }
+
+    set(input: string): void {
+        this.#rawValue = input;
+        this.#rawValue = this.state.value;
+    }
+
+    unformat(value: string = this.state.value): string {
+        return value.replace(this.#regExp.unformat, '').replace(this.formatParts.decimal, '.');
     }
 }
