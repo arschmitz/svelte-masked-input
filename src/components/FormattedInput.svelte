@@ -37,21 +37,25 @@
     $: updateValue(value);
 
     function initalize(..._: unknown[]) {
-        formattedInput = new FormattedInput({
-            callback: update,
-            currency,
-            disabled,
-            disabledClass,
-            formatOptions,
-            id,
+        formattedInput = new FormattedInput(
             locale,
-            polling,
-            type: format,
-        });
+            {
+                ...formatOptions,
+                currency,
+                style: format,
+            },
+            {
+                onChange: update,
+                disabled,
+                disabledClass,
+                id,
+                polling,
+            }
+        );
     }
 
     function updateOptions(..._: unknown[]) {
-        formattedInput.updateOptions({ disabled, disabledClass });
+        formattedInput.updateDisabled({ disabled, disabledClass });
     }
 
     function update({ numericValue: _numericValue, unformattedValue: _unformattedValue, value: _value }) {
@@ -85,13 +89,17 @@
         border-color: transparent;
         display: inline-flex;
         z-index: -1;
-    }
 
-    i {
-        font-style: normal;
-        color: transparent;
-        opacity: 0;
-        visibility: hidden;
+        i {
+            font-style: normal;
+            color: transparent;
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        .suffix {
+            color: initial;
+        }
     }
 
     input {
@@ -102,10 +110,6 @@
         background: none !important;
         background-color: transparent !important;
         background-image: none !important;
-    }
-
-    .suffix {
-        color: initial;
     }
 </style>
 

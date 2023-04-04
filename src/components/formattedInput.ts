@@ -1,23 +1,7 @@
 import type { State } from './interactiveFormatter';
 import InteractiveFormatter from './interactiveFormatter';
-import {
-    EVENTS
-} from '../constants';
+import { EVENTS } from '../constants';
 import { createStyleElement } from 'helpers';
-
-interface InputValues {
-    numericValue: number;
-    unformattedValue: string;
-    value: string;
-}
-
-interface FormattedInputOptions {
-    callback?: (values: InputValues) => void;
-    disabled?: boolean;
-    disabledClass?: string;
-    id?: number;
-    polling?: boolean;
-}
 
 interface FormattedInputState extends State {
     cursorPosition: number;
@@ -25,6 +9,14 @@ interface FormattedInputState extends State {
     disabledClass: string;
     polling: boolean;
     styles: CSSStyleDeclaration;
+}
+
+interface FormattedInputOptions {
+    disabled?: boolean;
+    disabledClass?: string;
+    id?: number;
+    onChange?: (values: FormattedInputState) => void;
+    polling?: boolean;
 }
 
 export class FormattedInput extends InteractiveFormatter {
@@ -46,7 +38,7 @@ export class FormattedInput extends InteractiveFormatter {
 
     #oldValue: string;
 
-    #onChange: (values: InputValues) => void;
+    #onChange: (values: FormattedInputState) => void;
 
     #poll: number;
 
@@ -153,7 +145,7 @@ export class FormattedInput extends InteractiveFormatter {
             this.#cursorPosition = this.#elements.input.selectionStart;
         }
 
-        super.update(input);
+        super.set(input);
 
         const { unformattedValue, value } = this.state;
         this.#onChange(this.state);
