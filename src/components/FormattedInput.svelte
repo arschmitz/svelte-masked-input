@@ -38,6 +38,7 @@
     let oldValue: string;
     let cursorPosBefore: number;
     let originalLength: number;
+    let previousValue: number;
 
     if (typeof value === 'number') {
         value = `${value}`;
@@ -61,6 +62,7 @@
             deleted,
             elementValue: inputElement?.value,
             newValue,
+            previousValue,
             rawValue,
             strippedValue
         }

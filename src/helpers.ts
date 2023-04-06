@@ -253,12 +253,22 @@ export function formatterConstructor({
         return value;
     }
 
+    function negativeOnly(type, { elementValue, deleted, previousValue }) {
+        const signRegExp = new RegExp(`^${formatParts[type].minusSign}$`);
+        const signSymbolRegExp = new RegExp(`^${formatParts[type].minusSign}\\${formatParts[type].symbol}$`);
+        return (signRegExp.test(elementValue) && !deleted)
+            || signSymbolRegExp.test(elementValue)
+            || (signRegExp.test(elementValue) && deleted && !signSymbolRegExp.test(previousValue));
+    }
+
+    function decimalOnly({ type, value }) {
+        return new RegExp(`^\\${formatParts[type].decimal}$`).test(value);
+    }
+
     function format(type: DecimalFormat) {
         return (values) => {
-            const signRegExp = new RegExp(`^${formatParts[type].minusSign}$`);
-            const isNegativeOnly = signRegExp.test(values.newValue || values.rawValue) && !values.deleted;
-            const decimalRegExp = new RegExp(`^\\${formatParts[type].decimal}$`);
-            const isDecimalOnly = decimalRegExp.test(values.elementValue);
+            const isNegativeOnly = negativeOnly(type, values);
+            const isDecimalOnly = decimalOnly({ type, value: values.elementValue });
             const value = formatDecimals({
                 ...values,
                 formatParts: formatParts[type],
@@ -271,12 +281,11 @@ export function formatterConstructor({
     }
 
     function formatInt(type: DecimalFormat) {
-        return ({ deleted, rawValue, newValue, elementValue }) => {
+        return (values) => {
+            const { rawValue, newValue, elementValue } = values;
             const intValue = getInt(newValue || rawValue, { currency, locale });
-            const signRegExp = new RegExp(`^${formatParts[type].minusSign}$`);
-            const isNegativeOnly = signRegExp.test(elementValue) && !deleted;
-            const decimalRegExp = new RegExp(`^\\${formatParts[type].decimal}$`);
-            const isDecimalOnly = decimalRegExp.test(elementValue);
+            const isNegativeOnly = negativeOnly(type, values);
+            const isDecimalOnly = decimalOnly({ type, value: elementValue });
 
             if (Number.isNaN(intValue) && !isNegativeOnly) {
                 return '';
