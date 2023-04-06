@@ -274,8 +274,8 @@ export function formatterConstructor({
             const minusPosition = chars.findIndex((char) => char === formatParts[type].minusSign);
             const intPosition = chars.findIndex((char) => !Number.isNaN(parseFloat(char)));
             const isBadNegative = formatParts[type].minusPosition === 'before'
-                ? minusPosition < intPosition
-                : minusPosition > intPosition;
+                ? intPosition > 1 && minusPosition < intPosition
+                : intPosition > 1 && minusPosition > intPosition;
             let value = formatDecimals({
                 ...values,
                 formatParts: formatParts[type],
@@ -301,8 +301,8 @@ export function formatterConstructor({
             const isMultiNegative = rawValue?.match(multiNegative)?.length > 1;
             const intPosition = chars.findIndex((char) => !Number.isNaN(parseFloat(char)));
             const isBadNegative = formatParts[type].minusPosition === 'before'
-                ? minusPosition < intPosition
-                : minusPosition > intPosition;
+                ? intPosition > 1 && minusPosition < intPosition
+                : intPosition > 1 && minusPosition > intPosition;
             const signSymbolRegExp = new RegExp(`^${formatParts[type].minusSign}\\${formatParts[type].symbol}$`);
             const isNegativeOnly = (signRegExp.test(elementValue) && !deleted)
                 || signSymbolRegExp.test(elementValue)
@@ -311,7 +311,7 @@ export function formatterConstructor({
             const decimalRegExp = new RegExp(`^\\${formatParts[type].decimal}$`);
             const isDecimalOnly = decimalRegExp.test(elementValue);
 
-            if (Number.isNaN(intValue) && !isNegativeOnly && !isBadNegative) {
+            if (Number.isNaN(intValue) && !isNegativeOnly && !isBadNegative && !isMultiNegative) {
                 return '';
             }
 
