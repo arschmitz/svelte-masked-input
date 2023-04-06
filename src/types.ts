@@ -5,6 +5,7 @@ export interface FormatParts {
     group: string;
     literal: string;
     minusSign: string;
+    minusPosition: string;
     parts: Intl.NumberFormatPart[];
     position?: string;
     prefix: string;
