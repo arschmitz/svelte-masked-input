@@ -38,7 +38,7 @@
     let oldValue: string;
     let cursorPosBefore: number;
     let originalLength: number;
-    let previousValue: number;
+    let previousValue: string;
 
     if (typeof value === 'number') {
         value = `${value}`;
@@ -127,6 +127,7 @@
                 return;
             }
 
+            previousValue = rawValue;
             inputElement.selectionStart = position;
             inputElement.selectionEnd = position;
         });
