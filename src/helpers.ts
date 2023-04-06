@@ -133,8 +133,8 @@ function getStyleParts(locale: string, options): FormatParts {
     let isBefore = true;
 
     return parts.reduce((collection, part, index) => {
-        if (prefixIndex == index) {
-            isBefore = false
+        if (prefixIndex === index) {
+            isBefore = false;
         }
         if (['currency', 'percentSign'].includes(part.type)) {
             collection.symbol = part.value;
@@ -269,21 +269,25 @@ export function formatterConstructor({
             const decimalRegExp = new RegExp(`^\\${formatParts[type].decimal}$`);
             const isDecimalOnly = decimalRegExp.test(elementValue);
             const multiNegative = new RegExp(`${formatParts[type].minusSign}`, 'g');
-            const chars = elementValue.split('')
+            const isMultiNegative = rawValue?.match(multiNegative)?.length > 1;
+            const chars = elementValue.split('');
             const minusPosition = chars.findIndex((char) => char === formatParts[type].minusSign);
-            const intPosition = chars.findIndex((char) => !Number.isNaN(parseFloat(char)))
-            const isBadNegative = rawValue?.match(multiNegative)?.length > 1
-                || formatParts[type].minusPosition === 'before'
+            const intPosition = chars.findIndex((char) => !Number.isNaN(parseFloat(char)));
+            const isBadNegative = formatParts[type].minusPosition === 'before'
                 ? minusPosition < intPosition
                 : minusPosition > intPosition;
-            const value = formatDecimals({
+            let value = formatDecimals({
                 ...values,
                 formatParts: formatParts[type],
                 formatter: formatObject(type),
                 type,
             });
 
-            return getLabel({ isDecimalOnly, isNegativeOnly, type, value: isBadNegative ? previousValue : value });
+            value = isBadNegative || isMultiNegative
+                ? previousValue
+                : value;
+
+            return getLabel({ isDecimalOnly, isNegativeOnly, type, value });
         };
     }
 
@@ -292,11 +296,11 @@ export function formatterConstructor({
             const intValue = getInt(newValue || rawValue, { currency, locale });
             const signRegExp = new RegExp(`^${formatParts[type].minusSign}$`);
             const multiNegative = new RegExp(`${formatParts[type].minusSign}`, 'g');
-            const chars = elementValue.split('')
+            const chars = elementValue.split('');
             const minusPosition = chars.findIndex((char) => char === formatParts[type].minusSign);
-            const intPosition = chars.findIndex((char) => !Number.isNaN(parseFloat(char)))
-            const isBadNegative = rawValue?.match(multiNegative)?.length > 1
-                || formatParts[type].minusPosition === 'before'
+            const isMultiNegative = rawValue?.match(multiNegative)?.length > 1;
+            const intPosition = chars.findIndex((char) => !Number.isNaN(parseFloat(char)));
+            const isBadNegative = formatParts[type].minusPosition === 'before'
                 ? minusPosition < intPosition
                 : minusPosition > intPosition;
             const signSymbolRegExp = new RegExp(`^${formatParts[type].minusSign}\\${formatParts[type].symbol}$`);
@@ -311,9 +315,11 @@ export function formatterConstructor({
                 return '';
             }
 
-            const value = formatObject(type === 'number' ? 'int' : `${type}Int`)({ input: intValue });
+            const value = isBadNegative || isMultiNegative
+                ? previousValue
+                : formatObject(type === 'number' ? 'int' : `${type}Int`)({ input: intValue });
 
-            return getLabel({ isDecimalOnly, isNegativeOnly, type, value: isBadNegative ? previousValue : value });
+            return getLabel({ isDecimalOnly, isNegativeOnly, type, value });
         };
     }
 
