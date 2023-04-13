@@ -53,8 +53,8 @@ export function formatDecimals(
         newValue,
     }: FormatDecimalsInput
 ): string {
-    const decimalEndRegExp = new RegExp(`\\${decimal}$`);
-    const decimalRegExp = new RegExp(`\\${decimal}`);
+    const decimalEndRegExp = new RegExp(`${escape(decimal)}$`);
+    const decimalRegExp = new RegExp(`${escape(decimal)}`);
     const isDecimal = decimalEndRegExp.test(newValue || elementValue);
     const hasDecimal = decimalRegExp.test(newValue || elementValue);
     const usedValue = isDecimal ? (newValue || strippedValue).slice(0, -1) : (newValue || strippedValue);
@@ -184,7 +184,7 @@ export function formatConstructor(
         let value = new Intl.NumberFormat(locale, options).format(callback ? callback(input) : input);
 
         if (suffix) {
-            value = value.replace(new RegExp(`${suffix}$`), '');
+            value = value.replace(new RegExp(`${escape(suffix)}$`), '');
         }
 
         const [intPart, decimalPart] = value.split(decimal);
@@ -251,7 +251,7 @@ export function formatterConstructor({
         }
 
         if (formatParts[type].position === 'end') {
-            const replacement = new RegExp(`${formatParts[type].suffix}$`);
+            const replacement = new RegExp(`${escape(formatParts[type].suffix)}$`);
             value = value.replace(replacement, '');
         }
 
@@ -261,14 +261,16 @@ export function formatterConstructor({
     function format(type: DecimalFormat) {
         return (values) => {
             const { rawValue, deleted, elementValue, previousValue } = values;
-            const signRegExp = new RegExp(`^${formatParts[type].minusSign}$`);
-            const signSymbolRegExp = new RegExp(`^${formatParts[type].minusSign}\\${formatParts[type].symbol}$`);
+            const signRegExp = new RegExp(`^${escape(formatParts[type].minusSign)}$`);
+            const signSymbolRegExp = new RegExp(
+                `^${escape(formatParts[type].minusSign)}\\${escape(formatParts[type].symbol)}$`
+            );
             const isNegativeOnly = (signRegExp.test(elementValue) && !deleted)
                 || signSymbolRegExp.test(elementValue)
                 || (signRegExp.test(elementValue) && deleted && !signSymbolRegExp.test(previousValue));
-            const decimalRegExp = new RegExp(`^\\${formatParts[type].decimal}$`);
+            const decimalRegExp = new RegExp(`^${escape(formatParts[type].decimal)}$`);
             const isDecimalOnly = decimalRegExp.test(elementValue);
-            const multiNegative = new RegExp(`${formatParts[type].minusSign}`, 'g');
+            const multiNegative = new RegExp(`${escape(formatParts[type].minusSign)}`, 'g');
             const isMultiNegative = rawValue?.match(multiNegative)?.length > 1;
             const chars = elementValue.split('');
             const minusPosition = chars.findIndex((char) => char === formatParts[type].minusSign);
@@ -294,8 +296,8 @@ export function formatterConstructor({
     function formatInt(type: DecimalFormat) {
         return ({ deleted, rawValue, newValue, elementValue, previousValue }) => {
             const intValue = getInt(newValue || rawValue, { currency, locale });
-            const signRegExp = new RegExp(`^${formatParts[type].minusSign}$`);
-            const multiNegative = new RegExp(`${formatParts[type].minusSign}`, 'g');
+            const signRegExp = new RegExp(`^${escape(formatParts[type].minusSign)}$`);
+            const multiNegative = new RegExp(`${escape(formatParts[type].minusSign)}`, 'g');
             const chars = elementValue.split('');
             const minusPosition = chars.findIndex((char) => char === formatParts[type].minusSign);
             const isMultiNegative = rawValue?.match(multiNegative)?.length > 1;
@@ -303,12 +305,12 @@ export function formatterConstructor({
             const isBadNegative = formatParts[type].minusPosition === 'before'
                 ? intPosition > 1 && minusPosition < intPosition
                 : intPosition > 1 && minusPosition > intPosition;
-            const signSymbolRegExp = new RegExp(`^${formatParts[type].minusSign}\\${formatParts[type].symbol}$`);
+            const signSymbolRegExp = new RegExp(`^${escape(formatParts[type].minusSign)}\\${escape(formatParts[type].symbol)}$`);
             const isNegativeOnly = (signRegExp.test(elementValue) && !deleted)
                 || signSymbolRegExp.test(elementValue)
                 || (signRegExp.test(elementValue) && deleted && !signSymbolRegExp.test(previousValue));
 
-            const decimalRegExp = new RegExp(`^\\${formatParts[type].decimal}$`);
+            const decimalRegExp = new RegExp(`^${escape(formatParts[type].decimal)}$`);
             const isDecimalOnly = decimalRegExp.test(elementValue);
 
             if (Number.isNaN(intValue) && !isNegativeOnly && !isBadNegative && !isMultiNegative) {
@@ -362,6 +364,10 @@ export function unformat(
     FormatPartsOptions = {}
 ): string {
     const { decimal } = getFormatParts({ currency, locale })[type];
-    const strip = new RegExp(`[^\\d\\${decimal}-]`, 'g');
+    const strip = new RegExp(`[^\\d${escape(decimal)}-]`, 'g');
     return typeof string === 'string' ? string.replace(strip, '').replace(decimal, '.') : (string || '').toString();
+}
+
+export function escape(string = ''): string {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
