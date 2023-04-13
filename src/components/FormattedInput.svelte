@@ -55,7 +55,7 @@
 
     let rawValue = formatterObject?.prefix && !strippedValue ? '' : strippedValue;
 
-    $: updateValue(value, format);
+    $: updateValue(currency, format, locale, value);
 
     function getInputValues(newValue?: string, deleted?: boolean) {
         return {
