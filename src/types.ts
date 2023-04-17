@@ -4,8 +4,8 @@ export interface FormatParts {
     decimal: string;
     group: string;
     literal: string;
-    minusSign: string;
     minusPosition: string;
+    minusSign: string;
     parts: Intl.NumberFormatPart[];
     position?: string;
     prefix: string;
@@ -39,6 +39,7 @@ export interface GetFormatPartsOptions {
 export interface FormatInput {
     elementValue: string;
     newValue: string;
+    previousValue: string;
     rawValue: string;
     strippedValue: string;
 }

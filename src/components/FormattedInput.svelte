@@ -3,10 +3,10 @@
 </script>
 
 <script lang="ts">
-    import type { Formatter, Formatters } from '../types';
+    import type { FormatStyles, Formatter, Formatters } from '../types';
     import { afterUpdate, onDestroy, onMount } from "svelte";
     import { EVENTS } from '../constants';
-    import { createStyleElement, unformat, formatterConstructor, styleMap } from '../helpers';
+    import { createStyleElement, unformat, formatterConstructor, styleMap, escape, getFormatParts } from '../helpers';
 
     export let currency = 'USD';
     export let format = '';
@@ -46,12 +46,15 @@
 
     strippedValue = unformat(value, { currency, locale, type: styleMap[format] });
     numericValue = Number.isNaN(parseFloat(strippedValue)) ? null : parseFloat(strippedValue);
+    previousValue = value || '';
     $: formatters = formatterConstructor({ currency, formatOptions, locale });
 
     $: formatterObject = formatters[format] || formatter;
     $: prefix = format ? (formatterObject?.prefix || '') : (prefix || '');
     $: suffix = format ? (formatterObject?.suffix || '') : (suffix || '');
     $: updateMaskStyle(disabled);
+    $: formatStyle = (format.replace(/int/i, '') || 'number') as FormatStyles
+    $: formatParts = getFormatParts({ locale, currency })[formatStyle];
 
     let rawValue = formatterObject?.prefix && !strippedValue ? '' : strippedValue;
 
@@ -84,8 +87,18 @@
                 return;
             }
 
+            const newRaw = formatterObject?.format({
+                elementValue: value,
+                newValue: null,
+                previousValue: rawValue,
+                rawValue: value,
+                strippedValue: unformat(value || '', {
+                    currency,
+                    locale,
+                    type: formatStyle,
+                })
+            });
 
-            const newRaw = formatterObject?.format(getInputValues(value));
             if ((newRaw && newRaw !== rawValue) || (oldFormat !== format)) {
                 cursorPosBefore = inputElement.selectionStart;
                 originalLength = rawValue.length;
@@ -99,6 +112,29 @@
         if (!ignoreLength) {
             cursorPosBefore = inputElement.selectionStart;
             originalLength = rawValue.length;
+        }
+
+        const prevGroupRegExp = new RegExp(`${escape(formatParts.group)}$`);
+        if (
+            inputElement.selectionStart === inputElement.selectionEnd
+            && deleted
+            && prevGroupRegExp.test(
+               previousValue.slice(0, -(previousValue.length - inputElement.selectionStart - 1))
+            )
+        ) {
+            rawValue = previousValue;
+            inputElement.value = previousValue;
+
+            setTimeout(() => {
+                if (!inputElement) {
+                    return;
+                }
+
+                inputElement.selectionStart = cursorPosBefore;
+                inputElement.selectionEnd = cursorPosBefore;
+            });
+
+            return;
         }
 
         oldFormat = format;
