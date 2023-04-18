@@ -53,7 +53,8 @@
     $: prefix = format ? (formatterObject?.prefix || '') : (prefix || '');
     $: suffix = format ? (formatterObject?.suffix || '') : (suffix || '');
     $: updateMaskStyle(disabled);
-    $: formatParts = getFormatParts({ locale, currency })[format.replace(/Int/, '')];
+    $: formatStyle = (format.replace(/int/i, '') || 'number') as FormatStyles
+    $: formatParts = getFormatParts({ locale, currency })[formatStyle];
 
     let rawValue = formatterObject?.prefix && !strippedValue ? '' : strippedValue;
 
@@ -94,7 +95,7 @@
                 strippedValue: unformat(value || '', {
                     currency,
                     locale,
-                    type: (format.replace(/int/i, '') || 'number') as FormatStyles
+                    type: formatStyle,
                 })
             });
 
