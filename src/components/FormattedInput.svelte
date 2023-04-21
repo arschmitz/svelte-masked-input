@@ -41,7 +41,7 @@
     let previousValue: string;
 
     if (typeof value === 'number') {
-        value = `${value}`;
+        value = value.toLocaleString(locale);
     }
 
     strippedValue = unformat(value, { currency, locale, type: styleMap[format] });
@@ -78,7 +78,7 @@
             }
 
             if (typeof value === 'number') {
-                value = `${value}`;
+                value = value.toLocaleString(locale);
             }
 
             if (value === undefined) {
