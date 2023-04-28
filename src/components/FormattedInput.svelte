@@ -71,6 +71,14 @@
         }
     }
 
+    function clear() {
+        previousValue = inputElement.value;
+        inputElement.value = '';
+        strippedValue = ''
+        numericValue = null;
+        oldFormat = format;
+    }
+
     function updateValue(..._: unknown[]) {
         setTimeout(() => {
             if (!inputElement) {
@@ -81,9 +89,8 @@
                 value = value.toLocaleString(locale);
             }
 
-            if (value === undefined) {
-                inputElement.value = '';
-                update();
+            if (!value) {
+                clear();
                 return;
             }
 
@@ -99,7 +106,7 @@
                 })
             });
 
-            if ((newRaw && newRaw !== rawValue) || (oldFormat !== format)) {
+            if (newRaw !== rawValue || oldFormat !== format) {
                 cursorPosBefore = inputElement.selectionStart;
                 originalLength = rawValue.length;
                 rawValue = inputElement.value = value;
@@ -109,6 +116,11 @@
     }
 
     function update({ ignoreLength = false, deleted = false } = {}) {
+        if (!inputElement.value) {
+            clear();
+            return;
+        }
+
         if (!ignoreLength) {
             cursorPosBefore = inputElement.selectionStart;
             originalLength = rawValue.length;
