@@ -74,7 +74,9 @@
     function clear() {
         previousValue = inputElement.value;
         inputElement.value = '';
-        strippedValue = ''
+        strippedValue = '';
+        inputElement.dataset.strippedValue = '';
+        inputElement.dataset.numericValue = null;
         numericValue = null;
         oldFormat = format;
     }
