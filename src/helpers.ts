@@ -45,20 +45,23 @@ const log10 = Math.log(10);
 
 export function formatDecimals(
     {
+        currency,
         formatParts: { decimal, suffix },
         formatter,
         strippedValue,
         elementValue,
+        locale,
         rawValue,
         newValue,
+        type,
     }: FormatDecimalsInput
 ): string {
     const decimalEndRegExp = new RegExp(`${escape(decimal)}$`);
     const decimalRegExp = new RegExp(`${escape(decimal)}`);
     const isDecimal = decimalEndRegExp.test(newValue || elementValue);
-    const hasDecimal = decimalRegExp.test(newValue || elementValue);
+    const hasDecimal = decimalRegExp.test(unformat(newValue || elementValue, { currency, locale, type }));
     const usedValue = isDecimal ? (newValue || strippedValue).slice(0, -1) : (newValue || strippedValue);
-    const intValue = parseFloat(usedValue.replace(decimal, '.'));
+    const intValue = getFloat(usedValue, { currency, locale, type });
     const digits = intValue > 0
         ? getSignificantDigitCount(strippedValue, decimal) + 1
         : Math.min(4, hasDecimal ? strippedValue.length - 1 : strippedValue.length);
@@ -68,7 +71,8 @@ export function formatDecimals(
     }
 
     const significantDigits = !/0$/.test(rawValue) ? undefined : digits;
-    return formatter({ decimal, hasDecimal, input: intValue, isDecimal, significantDigits, strippedValue, suffix });
+    const formatted = formatter({ decimal, hasDecimal, input: intValue, isDecimal, significantDigits, strippedValue, suffix })
+    return formatted;
 }
 
 export function getSignificantDigitCount(n: string | number, decimal: string): number {
@@ -171,7 +175,7 @@ export function formatConstructor(
         },
     };
 
-    function trimInput({ callback, options, values } : TrimInputInput): string {
+    function trimInput({ callback, options, type, values } : TrimInputInput): string {
         const { maximumFractionDigits } = options;
         const { isDecimal, hasDecimal, decimal, suffix, strippedValue } = values;
         let { input } = values;
@@ -187,8 +191,9 @@ export function formatConstructor(
             value = value.replace(new RegExp(`${escape(suffix)}$`), '');
         }
 
-        const [intPart, decimalPart] = value.split(decimal);
+        const [, decimalPart] = unformat(value, { currency: options.currency, locale, type }).split(decimal);
         const [, strippedDecimalPart] = strippedValue.split('.');
+        const intPart = value.substring(0, value.length - (decimalPart?.length ? decimalPart.length + 1 : 0));
 
         if (
             hasDecimal
@@ -206,7 +211,7 @@ export function formatConstructor(
 
     function handleDecimals(type: DecimalFormat, callback?: (input: number) => number): FormatFunction {
         return (values) => {
-            return trimInput({ callback, options: defaultOptions[type], values });
+            return trimInput({ callback, options: defaultOptions[type], type, values });
         };
     }
 
@@ -269,7 +274,7 @@ export function formatterConstructor({
                 || signSymbolRegExp.test(elementValue)
                 || (signRegExp.test(elementValue) && deleted && !signSymbolRegExp.test(previousValue));
             const decimalRegExp = new RegExp(`^${escape(formatParts[type].decimal)}$`);
-            const isDecimalOnly = decimalRegExp.test(elementValue);
+            const isDecimalOnly = decimalRegExp.test(unformat(elementValue, { currency, locale, type }));
             const multiNegative = new RegExp(`${escape(formatParts[type].minusSign)}`, 'g');
             const isMultiNegative = rawValue?.match(multiNegative)?.length > 1;
             const chars = elementValue.split('');
@@ -280,8 +285,10 @@ export function formatterConstructor({
                 : intPosition > 1 && minusPosition > intPosition;
             let value = formatDecimals({
                 ...values,
+                currency,
                 formatParts: formatParts[type],
                 formatter: formatObject(type),
+                locale,
                 type,
             });
 
@@ -295,7 +302,7 @@ export function formatterConstructor({
 
     function formatInt(type: DecimalFormat) {
         return ({ deleted, rawValue, newValue, elementValue, previousValue }) => {
-            const intValue = getInt(newValue || rawValue, { currency, locale });
+            const intValue = getInt(newValue || rawValue, { currency, locale, type });
             const signRegExp = new RegExp(`^${escape(formatParts[type].minusSign)}$`);
             const multiNegative = new RegExp(`${escape(formatParts[type].minusSign)}`, 'g');
             const chars = elementValue.split('');
@@ -363,7 +370,11 @@ export function unformat(
     } :
     FormatPartsOptions = {}
 ): string {
-    const { decimal } = getFormatParts({ currency, locale })[type];
+    const { decimal, symbol } = getFormatParts({ currency, locale })[type];
+    if (typeof string === 'string') {
+        const symbolRegex = new RegExp(escape(symbol));
+        string = string.replace(symbolRegex, '');
+    }
     const strip = new RegExp(`[^\\d${escape(decimal)}-]`, 'g');
     return typeof string === 'string' ? string.replace(strip, '').replace(decimal, '.') : (string || '').toString();
 }
