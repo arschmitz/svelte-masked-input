@@ -64,9 +64,11 @@ export interface FormatsObject extends BaseFormatObject {
 }
 
 export interface FormatDecimalsInput {
+    currency: string;
     elementValue: string;
     formatParts: FormatParts;
     formatter: FormatFunction;
+    locale: string;
     newValue: string;
     rawValue: string;
     strippedValue: string;
@@ -82,5 +84,6 @@ export interface FormatPartsOptions {
 export interface TrimInputInput {
     callback?: (input: number) => number;
     options: Intl.NumberFormatOptions;
+    type: FormatStyles;
     values: FormatFunctionInput;
 }
