@@ -193,7 +193,7 @@ export function formatConstructor(
 
         const [, decimalPart] = unformat(value, { currency: options.currency, locale, type }).split(decimal);
         const [, strippedDecimalPart] = strippedValue.split('.');
-        const intPart = value.substring(0, value.length - (decimalPart?.length - 2))
+        const intPart = value.substring(0, value.length - (decimalPart?.length ? decimalPart.length + 1 : 0));
 
         if (
             hasDecimal
